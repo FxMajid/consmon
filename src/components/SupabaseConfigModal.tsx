@@ -24,19 +24,27 @@ import {
   getSupabaseUrl,
   getSupabaseAnonKey
 } from '../lib/supabase';
-import { bulkUpsertIdCardsToSupabase } from '../lib/supabaseService';
-import { IDCardKonsumsi } from '../types';
+import { 
+  bulkUpsertIdCardsToSupabase, 
+  bulkUpsertHariHToSupabase, 
+  bulkUpsertVouchersToSupabase 
+} from '../lib/supabaseService';
+import { IDCardKonsumsi, HariHGroupDistribution, VoucherDistributionItem } from '../types';
 
 interface SupabaseConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
   idCards: IDCardKonsumsi[];
+  hariHGroups?: HariHGroupDistribution[];
+  vouchers?: VoucherDistributionItem[];
 }
 
 export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({
   isOpen,
   onClose,
   idCards,
+  hariHGroups = [],
+  vouchers = [],
 }) => {
   const [copiedSql, setCopiedSql] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -184,9 +192,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.vouchers;`;
     setSyncFeedback(null);
 
     try {
-      const ok = await bulkUpsertIdCardsToSupabase(idCards);
-      if (ok) {
-        setSyncFeedback('Sukses! Data ID Card berhasil diunggah ke Supabase.');
+      // 1. Sync ID Cards
+      const okCards = await bulkUpsertIdCardsToSupabase(idCards);
+      
+      // 2. Sync Hari H Groups if provided
+      let okHariH = true;
+      if (hariHGroups && hariHGroups.length > 0) {
+        okHariH = await bulkUpsertHariHToSupabase(hariHGroups);
+      }
+
+      // 3. Sync Vouchers if provided
+      let okVouchers = true;
+      if (vouchers && vouchers.length > 0) {
+        okVouchers = await bulkUpsertVouchersToSupabase(vouchers);
+      }
+
+      if (okCards || okHariH || okVouchers) {
+        setSyncFeedback(`Sukses! ${idCards.length} ID Card, ${hariHGroups.length} grup Hari H, dan ${vouchers.length} voucher berhasil disimpan ke Supabase.`);
       } else {
         setSyncFeedback('Gagal mengunggah data. Pastikan skrip SQL sudah dijalankan di Supabase.');
       }
@@ -411,18 +433,18 @@ CREATE TABLE IF NOT EXISTS public.id_cards_konsumsi (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs space-y-2">
               <div className="font-bold text-emerald-900 flex items-center space-x-1.5">
                 <RefreshCw className="w-4 h-4 text-emerald-700" />
-                <span>Sinkronisasi Awal Data ID Card ke Supabase</span>
+                <span>Simpan &amp; Sinkronkan Semua Data Bawaan ke Supabase</span>
               </div>
               <p className="text-[11px] text-emerald-800">
-                Unggah {idCards.length} data ID Card lokal ke database Supabase agar siap dipindai oleh peserta.
+                Unggah semua data bawaan ({idCards.length} ID Card panitia, {hariHGroups.length} grup distribusi Hari H, dan {vouchers.length} voucher) langsung ke tabel database Supabase.
               </p>
               <button
                 onClick={handleInitialSync}
                 disabled={isSyncing}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs shadow-2xs transition-colors"
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs shadow-2xs transition-colors"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? 'Sedang Mengunggah...' : 'Unggah Data ID Card ke Cloud'}</span>
+                <span>{isSyncing ? 'Sedang Menyimpan ke Database...' : 'Simpan Semua Data Bawaan ke Supabase'}</span>
               </button>
               {syncFeedback && (
                 <div className="text-[11px] font-medium text-emerald-900 pt-1">

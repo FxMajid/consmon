@@ -889,6 +889,8 @@ export default function App() {
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}
         idCards={idCards}
+        hariHGroups={hariHGroups}
+        vouchers={vouchers}
       />
 
       {/* Modal Import Data (CSV/TSV/JSON ke Supabase & Local State) */}

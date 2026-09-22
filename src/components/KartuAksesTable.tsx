@@ -521,14 +521,19 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                       {isCardActive ? (
                         <div className="space-y-1">
                           <h4 className="font-black text-slate-900 text-sm">{card.holderName}</h4>
-                          <div className="text-xs font-medium text-blue-700">{card.areaKerja}</div>
-                          <div className="text-[11px] text-slate-500 font-mono">{card.holderEmail}</div>
+                          <div className="text-xs font-semibold text-blue-700">{card.areaKerja}</div>
+                          <div className="text-[11px] text-slate-600 font-mono">{card.holderEmail}</div>
+                          {card.activatedAt && (
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              Teraktivasi: {card.activatedAt}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="py-2 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                           <QrCode className="w-6 h-6 mx-auto text-slate-300 mb-1" />
                           <div className="text-xs font-semibold text-slate-600">ID Card Siap Diaktivasi</div>
-                          <div className="text-[10px] text-slate-400">Scan QR fisik atau klik aktivasi manual</div>
+                          <div className="text-[10px] text-slate-400">Scan QR fisik atau klik aktivasi mandiri</div>
                         </div>
                       )}
                     </div>

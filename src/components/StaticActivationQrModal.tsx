@@ -152,7 +152,7 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
                   <span className="text-white font-semibold">Scan QR</span> di atas dengan kamera smartphone Anda.
                 </li>
                 <li>
-                  Isi <strong className="text-amber-300">Nama</strong> (teks bebas), pilih <strong className="text-amber-300">Area Kerja</strong> (drop-down), &amp; <strong className="text-amber-300">Email</strong>.
+                  Isi <strong className="text-amber-300">Nama</strong> (teks bebas), pilih <strong className="text-amber-300">Area Kerja</strong> (drop-down), &amp; <strong className="text-amber-300">No. WhatsApp / Kontak</strong>.
                 </li>
                 <li>
                   Langsung dapatkan <strong className="text-emerald-400">QR Pengambilan Konsumsi Digital</strong> untuk makan Pagi, Siang &amp; Malam!
@@ -172,7 +172,7 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
                   Simulasikan Sebagai User Yang Scan
                 </h5>
                 <p className="text-[11px] text-slate-600">
-                  Buka formulir aktivasi 3-field (Nama, Area Kerja, Email) sekarang juga.
+                  Buka formulir aktivasi 3-field (Nama, Area Kerja, No. WhatsApp / Kontak) sekarang juga.
                 </p>
               </div>
             </div>

@@ -18,6 +18,7 @@ import { isSupabaseConfigured, getSupabase } from './lib/supabase';
 import { 
   fetchIdCardsFromSupabase, 
   upsertIdCardToSupabase, 
+  bulkUpsertIdCardsToSupabase,
   fetchHariHFromSupabase, 
   upsertHariHToSupabase, 
   bulkUpsertHariHToSupabase,
@@ -81,7 +82,23 @@ export default function App() {
     const saved = localStorage.getItem('hbd_id_cards');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // If saved data contains legacy pre-filled test names, reset to blank unactivated cards
+        if (
+          Array.isArray(parsed) &&
+          parsed.some(
+            (c: any) =>
+              c.holderName === 'FEBRIANESA PARENGKUAN' ||
+              c.holderName === 'Raditya Pratama' ||
+              c.holderName === 'Citra Kirana Lestari' ||
+              c.holderName === 'TRIDOYO AFIT WIJAYA' ||
+              c.holderName === 'MARIA APRICHRISNA'
+          )
+        ) {
+          localStorage.setItem('hbd_id_cards', JSON.stringify(INITIAL_ID_CARDS));
+          return INITIAL_ID_CARDS;
+        }
+        return parsed;
       } catch (e) {
         console.error('Error parsing saved ID cards', e);
       }
@@ -234,7 +251,21 @@ export default function App() {
     // 1. Initial Load
     fetchIdCardsFromSupabase().then((cloudCards) => {
       if (cloudCards && cloudCards.length > 0) {
-        setIdCards((prev) => mergeCards(prev, cloudCards));
+        const hasLegacyNames = cloudCards.some(
+          (c) =>
+            c.holderName === 'FEBRIANESA PARENGKUAN' ||
+            c.holderName === 'Raditya Pratama' ||
+            c.holderName === 'Citra Kirana Lestari' ||
+            c.holderName === 'TRIDOYO AFIT WIJAYA' ||
+            c.holderName === 'MARIA APRICHRISNA'
+        );
+        if (hasLegacyNames) {
+          bulkUpsertIdCardsToSupabase(INITIAL_ID_CARDS);
+          setIdCards(INITIAL_ID_CARDS);
+          localStorage.setItem('hbd_id_cards', JSON.stringify(INITIAL_ID_CARDS));
+        } else {
+          setIdCards((prev) => mergeCards(prev, cloudCards));
+        }
       }
     });
 

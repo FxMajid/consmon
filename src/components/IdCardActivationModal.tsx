@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Sparkles, 
@@ -50,22 +50,34 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
   const [showAdvancedCardPicker, setShowAdvancedCardPicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Ref to track if modal was previously open to prevent background sync from wiping user input
+  const prevIsOpenRef = useRef(false);
+  const lastCardIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (isOpen) {
+    // Only initialize form fields when the modal opens freshly OR when target card ID changes
+    const justOpened = isOpen && !prevIsOpenRef.current;
+    const cardChanged = isOpen && card?.id && card.id !== lastCardIdRef.current;
+
+    if (justOpened || cardChanged) {
       if (card) {
         setSelectedCardId(card.id);
         setName(card.holderName || '');
         setContact(card.holderEmail || '');
         setAreaKerja(card.areaKerja || WORK_AREAS[0]);
+        lastCardIdRef.current = card.id;
       } else {
         // Auto-assign first available unactivated card or generate next sequence
         const firstUnactivated = allCards.find((c) => c.status === 'unactivated');
         if (firstUnactivated) {
           setSelectedCardId(firstUnactivated.id);
+          lastCardIdRef.current = firstUnactivated.id;
         } else {
           // generate next ID
           const nextNum = allCards.length + 1;
-          setSelectedCardId(`IDC-${String(nextNum).padStart(3, '0')}`);
+          const newId = `IDC-${String(nextNum).padStart(3, '0')}`;
+          setSelectedCardId(newId);
+          lastCardIdRef.current = newId;
         }
         setName('');
         setContact('');
@@ -74,7 +86,12 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
       setErrorMsg('');
       setShowAdvancedCardPicker(false);
     }
-  }, [isOpen, card, allCards]);
+
+    prevIsOpenRef.current = isOpen;
+    if (!isOpen) {
+      lastCardIdRef.current = null;
+    }
+  }, [isOpen, card?.id]);
 
   if (!isOpen) return null;
 

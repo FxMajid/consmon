@@ -344,6 +344,9 @@ export default function App() {
     };
   }, []);
 
+  // Ref to track if initial URL action was already processed
+  const urlHandledRef = React.useRef(false);
+
   // Auto-detect ?aktivasi=true or #aktivasi in URL (when panitia scans the static QR code with phone camera)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -360,7 +363,8 @@ export default function App() {
           urlParams.has('act') ||
           hash.toLowerCase().includes('aktivasi');
 
-        if (isAktivasi) {
+        if (isAktivasi && !urlHandledRef.current) {
+          urlHandledRef.current = true;
           const cardIdParam = urlParams.get('cardId') || urlParams.get('id');
           let targetCard: IDCardKonsumsi | null = null;
           if (cardIdParam) {
@@ -375,11 +379,19 @@ export default function App() {
             isOpen: true,
             card: targetCard,
           });
+
+          // Clean up URL parameters cleanly to prevent re-triggering
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (e) {
+            // ignore
+          }
         }
 
         // Support direct digital QR pickup link: ?pickup=IDC-001 or ?digital=IDC-001
         const pickupParam = urlParams.get('pickup') || urlParams.get('digital') || urlParams.get('qr');
-        if (pickupParam) {
+        if (pickupParam && !urlHandledRef.current) {
+          urlHandledRef.current = true;
           const matched = idCards.find(
             (c) =>
               c.id.toUpperCase() === pickupParam.toUpperCase() ||
@@ -391,6 +403,11 @@ export default function App() {
               isOpen: true,
               card: matched,
             });
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {
+              // ignore
+            }
           }
         }
       } catch (err) {

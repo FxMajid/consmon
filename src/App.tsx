@@ -12,6 +12,16 @@ import { IdCardActivationModal } from './components/IdCardActivationModal';
 import { DigitalPickupQrModal } from './components/DigitalPickupQrModal';
 import { PrintableIdCardsModal } from './components/PrintableIdCardsModal';
 import { StaticActivationQrModal } from './components/StaticActivationQrModal';
+import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { isSupabaseConfigured } from './lib/supabase';
+import { 
+  fetchIdCardsFromSupabase, 
+  upsertIdCardToSupabase, 
+  fetchHariHFromSupabase, 
+  upsertHariHToSupabase, 
+  fetchVouchersFromSupabase, 
+  upsertVoucherToSupabase 
+} from './lib/supabaseService';
 
 import { 
   HariHGroupDistribution, 
@@ -96,6 +106,9 @@ export default function App() {
   // Modal state for Static QR Activation (Standee/Poster)
   const [isStaticQrModalOpen, setIsStaticQrModalOpen] = useState(false);
 
+  // Modal state for Supabase Database Configuration & Status
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+
   // Modal state for detailed check-in
   const [modalData, setModalData] = useState<{
     isOpen: boolean;
@@ -145,6 +158,29 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hbd_id_cards', JSON.stringify(idCards));
   }, [idCards]);
+
+  // Initial cloud sync from Supabase if configured
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    fetchIdCardsFromSupabase().then((cloudCards) => {
+      if (cloudCards && cloudCards.length > 0) {
+        setIdCards(cloudCards);
+      }
+    });
+
+    fetchHariHFromSupabase().then((cloudHariH) => {
+      if (cloudHariH && cloudHariH.length > 0) {
+        setHariHGroups(cloudHariH);
+      }
+    });
+
+    fetchVouchersFromSupabase().then((cloudVouchers) => {
+      if (cloudVouchers && cloudVouchers.length > 0) {
+        setVouchers(cloudVouchers);
+      }
+    });
+  }, []);
 
   // Overall Statistics
   const globalStats = useMemo(() => {
@@ -410,6 +446,11 @@ export default function App() {
       card: activatedCard,
     });
 
+    // Sync with Supabase if configured
+    if (isSupabaseConfigured()) {
+      upsertIdCardToSupabase(activatedCard);
+    }
+
     return activatedCard;
   };
 
@@ -424,13 +465,19 @@ export default function App() {
             siang: { claimed: false },
             malam: { claimed: false },
           };
-          return {
+          const updated = {
             ...c,
             claimedMeals: {
               ...currentClaimed,
               [meal]: { claimed: true, claimedAt: timeStr },
             },
           };
+
+          if (isSupabaseConfigured()) {
+            upsertIdCardToSupabase(updated);
+          }
+
+          return updated;
         }
         return c;
       })
@@ -529,6 +576,7 @@ export default function App() {
         onResetData={handleResetData}
         onExportCsv={handleExportCsv}
         onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -664,6 +712,13 @@ export default function App() {
           setIsStaticQrModalOpen(false);
           setActivationModalState({ isOpen: true, card: null });
         }}
+      />
+
+      {/* Modal Konfigurasi Integrasi Database Supabase */}
+      <SupabaseConfigModal
+        isOpen={isSupabaseModalOpen}
+        onClose={() => setIsSupabaseModalOpen(false)}
+        idCards={idCards}
       />
     </div>
   );

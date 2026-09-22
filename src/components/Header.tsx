@@ -9,8 +9,10 @@ import {
   CheckCircle2, 
   Clock, 
   Download,
-  Scan
+  Scan,
+  Database
 } from 'lucide-react';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface HeaderProps {
   activeTab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget';
@@ -25,6 +27,7 @@ interface HeaderProps {
   onResetData: () => void;
   onExportCsv: () => void;
   onOpenScanner: () => void;
+  onOpenSupabaseConfig?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,8 +36,10 @@ export const Header: React.FC<HeaderProps> = ({
   stats,
   onResetData,
   onExportCsv,
-  onOpenScanner
+  onOpenScanner,
+  onOpenSupabaseConfig,
 }) => {
+  const isCloudActive = isSupabaseConfigured();
   const percentHariH = stats.totalPorsiHariH > 0 
     ? Math.round((stats.diambilHariH / stats.totalPorsiHariH) * 100) 
     : 0;
@@ -90,6 +95,27 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div className="flex items-center space-x-1 ml-auto">
+              {onOpenSupabaseConfig && (
+                <button
+                  id="btn-supabase-config"
+                  onClick={onOpenSupabaseConfig}
+                  title={isCloudActive ? 'Supabase: Cloud PostgreSQL Terhubung' : 'Supabase: Mode Lokal (Klik untuk info konfigurasi)'}
+                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    isCloudActive
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 shadow-2xs'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Database className={`w-3.5 h-3.5 ${isCloudActive ? 'text-emerald-600' : 'text-slate-500'}`} />
+                  <span className="hidden sm:inline">Supabase</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isCloudActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
+                    }`}
+                  />
+                </button>
+              )}
+
               <button
                 id="btn-export-csv"
                 onClick={onExportCsv}

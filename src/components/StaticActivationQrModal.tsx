@@ -29,11 +29,14 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Static activation payload: can be URL or static activation string
+  // Static activation payload: URL for smartphone camera scanning
   const staticActivationCode = 'HBD-STATIC-ACTIVATION';
-  const activationUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}${window.location.pathname}?aktivasi=true` 
-    : 'https://hbd-konsumsi.event/?aktivasi=true';
+  const getActivationUrl = () => {
+    if (typeof window === 'undefined') return 'https://consmon.vercel.app/?aktivasi=true';
+    const baseUrl = `${window.location.origin}${window.location.pathname}`.replace(/\/+$/, '');
+    return `${baseUrl}/?aktivasi=true`;
+  };
+  const activationUrl = getActivationUrl();
 
   useEffect(() => {
     if (isOpen) {
@@ -62,6 +65,10 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
     navigator.clipboard.writeText(activationUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOpenLinkDirectly = () => {
+    window.open(activationUrl, '_blank');
   };
 
   return (
@@ -128,6 +135,9 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
               )}
               <div className="text-[10px] font-mono font-black text-slate-800 tracking-widest mt-1">
                 KODE: {staticActivationCode}
+              </div>
+              <div className="mt-1 text-[9px] text-slate-500 truncate max-w-[200px] mx-auto font-mono">
+                {activationUrl}
               </div>
             </div>
 
@@ -204,6 +214,14 @@ export const StaticActivationQrModal: React.FC<StaticActivationQrModalProps> = (
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
                 <span>{copied ? 'Link Tersalin!' : 'Salin Link'}</span>
+              </button>
+
+              <button
+                onClick={handleOpenLinkDirectly}
+                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Tes Buka Link</span>
               </button>
             </div>
 

@@ -182,6 +182,65 @@ export default function App() {
     });
   }, []);
 
+  // Auto-detect ?aktivasi=true or #aktivasi in URL (when panitia scans the static QR code with phone camera)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleUrlActions = () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hash = window.location.hash || '';
+
+        const isAktivasi = 
+          urlParams.get('aktivasi') === 'true' || 
+          urlParams.get('register') === 'true' || 
+          urlParams.get('scan') === 'aktivasi' ||
+          urlParams.has('act') ||
+          hash.toLowerCase().includes('aktivasi');
+
+        if (isAktivasi) {
+          const cardIdParam = urlParams.get('cardId') || urlParams.get('id');
+          let targetCard: IDCardKonsumsi | null = null;
+          if (cardIdParam) {
+            targetCard = idCards.find((c) => c.id.toUpperCase() === cardIdParam.toUpperCase()) || null;
+          }
+          if (!targetCard) {
+            targetCard = idCards.find((c) => c.status === 'unactivated') || null;
+          }
+
+          setActiveTab('kartu_akses');
+          setActivationModalState({
+            isOpen: true,
+            card: targetCard,
+          });
+        }
+
+        // Support direct digital QR pickup link: ?pickup=IDC-001 or ?digital=IDC-001
+        const pickupParam = urlParams.get('pickup') || urlParams.get('digital') || urlParams.get('qr');
+        if (pickupParam) {
+          const matched = idCards.find(
+            (c) =>
+              c.id.toUpperCase() === pickupParam.toUpperCase() ||
+              c.pickupCode.toUpperCase() === pickupParam.toUpperCase()
+          );
+          if (matched) {
+            setActiveTab('kartu_akses');
+            setDigitalQrModalState({
+              isOpen: true,
+              card: matched,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error handling URL params:', err);
+      }
+    };
+
+    handleUrlActions();
+    window.addEventListener('popstate', handleUrlActions);
+    return () => window.removeEventListener('popstate', handleUrlActions);
+  }, [idCards]);
+
   // Overall Statistics
   const globalStats = useMemo(() => {
     let totalPorsiHariH = 0;

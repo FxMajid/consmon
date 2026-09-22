@@ -129,15 +129,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       playBeepSuccess();
       const firstUnactivated = idCards.find((c) => c.status === 'unactivated');
       const fallbackId = firstUnactivated ? firstUnactivated.id : `IDC-${String(idCards.length + 1).padStart(3, '0')}`;
+      const targetCard = firstUnactivated || {
+        id: fallbackId,
+        cardCode: `HBD-ID-${fallbackId}`,
+        activationCode: 'HBD-STATIC-ACTIVATION',
+        pickupCode: `HBD-PICKUP-${fallbackId}`,
+        status: 'unactivated' as const,
+      };
+
+      if (onOpenActivationModal) {
+        onClose();
+        onOpenActivationModal(targetCard);
+        return;
+      }
+
       setScanResult({
         type: 'id_card_activation',
-        idCard: firstUnactivated || {
-          id: fallbackId,
-          cardCode: `HBD-ID-${fallbackId}`,
-          activationCode: 'HBD-STATIC-ACTIVATION',
-          pickupCode: `HBD-PICKUP-${fallbackId}`,
-          status: 'unactivated' as const,
-        },
+        idCard: targetCard,
         rawCode: decodedText,
       });
       return;

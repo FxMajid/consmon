@@ -10,18 +10,22 @@ import {
   Smartphone, 
   Building, 
   Shield, 
-  Info,
-  ExternalLink,
-  CreditCard,
-  QrCode,
-  Printer,
-  Sparkles,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Scan,
-  Utensils,
-  Filter
+  Info, 
+  ExternalLink, 
+  CreditCard, 
+  QrCode, 
+  Printer, 
+  Sparkles, 
+  ShieldCheck, 
+  CheckCircle2, 
+  AlertCircle, 
+  Scan, 
+  Utensils, 
+  Filter,
+  Activity,
+  Download,
+  Radio,
+  Clock
 } from 'lucide-react';
 
 interface KartuAksesTableProps {
@@ -45,7 +49,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
   onOpenScanner,
   onClaimMeal,
 }) => {
-  const [subTab, setSubTab] = useState<'id_cards' | 'master_pic'>('id_cards');
+  const [subTab, setSubTab] = useState<'id_cards' | 'monitoring_live' | 'master_pic'>('id_cards');
 
   // ID Cards state filters
   const [idSearchQuery, setIdSearchQuery] = useState('');
@@ -85,8 +89,69 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
     const total = idCards.length;
     const active = idCards.filter((c) => c.status === 'active').length;
     const unactivated = total - active;
-    return { total, active, unactivated };
+    
+    // Total meal claims among active cards
+    const pagiClaimed = idCards.filter((c) => c.claimedMeals?.pagi?.claimed).length;
+    const siangClaimed = idCards.filter((c) => c.claimedMeals?.siang?.claimed).length;
+    const malamClaimed = idCards.filter((c) => c.claimedMeals?.malam?.claimed).length;
+
+    return { total, active, unactivated, pagiClaimed, siangClaimed, malamClaimed };
   }, [idCards]);
+
+  // Active / Activated Cards sorted by activation date (most recent first)
+  const activatedCards = useMemo(() => {
+    return idCards
+      .filter((c) => c.status === 'active')
+      .sort((a, b) => {
+        const dateA = a.activatedAt ? new Date(a.activatedAt).getTime() : 0;
+        const dateB = b.activatedAt ? new Date(b.activatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+  }, [idCards]);
+
+  const filteredActivatedCards = useMemo(() => {
+    return activatedCards.filter((card) => {
+      if (idAreaFilter !== 'all' && card.areaKerja !== idAreaFilter) {
+        return false;
+      }
+      if (idSearchQuery.trim()) {
+        const q = idSearchQuery.toLowerCase();
+        return (
+          card.id.toLowerCase().includes(q) ||
+          card.cardCode.toLowerCase().includes(q) ||
+          (card.holderName && card.holderName.toLowerCase().includes(q)) ||
+          (card.holderEmail && card.holderEmail.toLowerCase().includes(q)) ||
+          (card.areaKerja && card.areaKerja.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [activatedCards, idAreaFilter, idSearchQuery]);
+
+  // Export activated list to CSV
+  const handleExportCsv = () => {
+    const headers = ['ID Card', 'Nomor Seri', 'Nama Lengkap', 'Email', 'Area Kerja', 'Kategori', 'Waktu Aktivasi', 'Pagi', 'Siang', 'Malam'];
+    const rows = activatedCards.map((c) => [
+      c.id,
+      c.cardCode,
+      `"${c.holderName || ''}"`,
+      `"${c.holderEmail || ''}"`,
+      `"${c.areaKerja || ''}"`,
+      c.kategori || 'Internal',
+      c.activatedAt || '',
+      c.claimedMeals?.pagi?.claimed ? 'Sudah Diambil' : 'Belum',
+      c.claimedMeals?.siang?.claimed ? 'Sudah Diambil' : 'Belum',
+      c.claimedMeals?.malam?.claimed ? 'Sudah Diambil' : 'Belum',
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `monitoring_aktivasi_idcard_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Master PIC filter
   const filteredCards = useMemo(() => {
@@ -181,7 +246,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
       </div>
 
       {/* Sub Navigation Switcher */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setSubTab('id_cards')}
           className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors ${
@@ -191,7 +256,23 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
           }`}
         >
           <CreditCard className="w-4 h-4" />
-          <span>Aktivasi &amp; Cetak ID Card Konsumsi ({idCardStats.total})</span>
+          <span>Aktivasi &amp; Cetak ID Card ({idCardStats.total})</span>
+        </button>
+
+        <button
+          onClick={() => setSubTab('monitoring_live')}
+          className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+            subTab === 'monitoring_live'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <Activity className="w-4 h-4" />
+          <span>Live Monitoring Aktivasi ({idCardStats.active})</span>
         </button>
 
         <button
@@ -496,7 +577,284 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
         </div>
       )}
 
-      {/* VIEW 2: MASTER ALOKASI PIC & JADWAL KEHADIRAN (EXISTING TABLE) */}
+      {/* VIEW 2: LIVE MONITORING AKTIVASI ID CARD */}
+      {subTab === 'monitoring_live' && (
+        <div className="space-y-6">
+          {/* Header Monitoring & Status Cloud */}
+          <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-5 border border-emerald-500/30 shadow-md">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="inline-flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+                    <span>Real-time Live Sync</span>
+                  </span>
+                  <span className="text-slate-400 text-xs">Supabase Cloud Connected</span>
+                </div>
+                <h3 className="font-bold text-lg text-white mt-1">
+                  Live Monitoring Registrasi &amp; Aktivasi ID Card
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                  Pantau langsung panitia/staff yang baru saja melakukan aktivasi mandiri melalui scan QR Statis di venue. Data tersinkronisasi otomatis secara real-time ke cloud database Supabase.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleExportCsv}
+                  className="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Laporan CSV ({activatedCards.length})</span>
+                </button>
+
+                {onOpenStaticQrModal && (
+                  <button
+                    onClick={onOpenStaticQrModal}
+                    className="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition-all"
+                  >
+                    <QrCode className="w-4 h-4 text-emerald-400" />
+                    <span>QR Statis Standee</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Metrics Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-5 pt-4 border-t border-slate-800">
+              <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Total Kartu</div>
+                <div className="text-xl font-black text-white mt-0.5">{idCardStats.total}</div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Alokasi Fisik</div>
+              </div>
+
+              <div className="bg-emerald-950/40 rounded-xl p-3 border border-emerald-500/30">
+                <div className="text-[10px] text-emerald-400 font-semibold uppercase">Teraktivasi</div>
+                <div className="text-xl font-black text-emerald-300 mt-0.5">{idCardStats.active}</div>
+                <div className="text-[9px] text-emerald-400/80 mt-0.5">
+                  {((idCardStats.active / Math.max(1, idCardStats.total)) * 100).toFixed(0)}% Selesai
+                </div>
+              </div>
+
+              <div className="bg-amber-950/40 rounded-xl p-3 border border-amber-500/30">
+                <div className="text-[10px] text-amber-400 font-semibold uppercase">Belum Aktif</div>
+                <div className="text-xl font-black text-amber-300 mt-0.5">{idCardStats.unactivated}</div>
+                <div className="text-[9px] text-amber-400/80 mt-0.5">Menunggu Scan</div>
+              </div>
+
+              <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Makan Pagi</div>
+                <div className="text-xl font-black text-blue-400 mt-0.5">
+                  {idCardStats.pagiClaimed} <span className="text-xs text-slate-400 font-normal">/ {idCardStats.active}</span>
+                </div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Terdistribusi</div>
+              </div>
+
+              <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Makan Siang</div>
+                <div className="text-xl font-black text-blue-400 mt-0.5">
+                  {idCardStats.siangClaimed} <span className="text-xs text-slate-400 font-normal">/ {idCardStats.active}</span>
+                </div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Terdistribusi</div>
+              </div>
+
+              <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Makan Malam</div>
+                <div className="text-xl font-black text-blue-400 mt-0.5">
+                  {idCardStats.malamClaimed} <span className="text-xs text-slate-400 font-normal">/ {idCardStats.active}</span>
+                </div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Terdistribusi</div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mt-4 pt-3 border-t border-slate-800/60">
+              <div className="flex justify-between text-xs text-slate-300 mb-1 font-medium">
+                <span>Progress Registrasi Lapangan</span>
+                <span>{idCardStats.active} dari {idCardStats.total} Panitia ({((idCardStats.active / Math.max(1, idCardStats.total)) * 100).toFixed(0)}%)</span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${(idCardStats.active / Math.max(1, idCardStats.total)) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[240px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Cari nama, email, area kerja..."
+                  value={idSearchQuery}
+                  onChange={(e) => setIdSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+
+              <select
+                value={idAreaFilter}
+                onChange={(e) => setIdAreaFilter(e.target.value)}
+                className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-700 bg-white font-medium max-w-[220px]"
+              >
+                <option value="all">Semua Area Kerja</option>
+                {WORK_AREAS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
+              Menampilkan <span className="font-bold text-slate-900">{filteredActivatedCards.length}</span> dari <span className="font-bold text-slate-900">{activatedCards.length}</span> kartu aktif
+            </div>
+          </div>
+
+          {/* Live Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-3 w-12 text-center">No</th>
+                    <th className="py-3 px-3">Waktu Aktivasi</th>
+                    <th className="py-3 px-3">ID Card</th>
+                    <th className="py-3 px-3">Nama Pemegang</th>
+                    <th className="py-3 px-3">Email</th>
+                    <th className="py-3 px-3">Area Kerja</th>
+                    <th className="py-3 px-2 text-center">Pagi</th>
+                    <th className="py-3 px-2 text-center">Siang</th>
+                    <th className="py-3 px-2 text-center">Malam</th>
+                    <th className="py-3 px-3 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {filteredActivatedCards.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="py-12 text-center text-slate-400">
+                        <Activity className="w-8 h-8 mx-auto text-slate-300 mb-2 opacity-60" />
+                        <div className="text-xs font-semibold text-slate-600">Belum Ada Aktivasi yang Sesuai</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          Panitia dapat melakukan aktivasi melalui scan QR Statis di pintu masuk venue.
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredActivatedCards.map((card, idx) => (
+                      <tr key={card.id} className="hover:bg-emerald-50/40 transition-colors">
+                        <td className="py-3 px-3 text-center font-mono text-slate-400 text-[11px]">
+                          {idx + 1}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>{card.activatedAt || '-'}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-slate-900 text-white">
+                            {card.id}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="font-bold text-slate-900">{card.holderName || '-'}</div>
+                          <div className="text-[10px] text-slate-400 uppercase">{card.kategori || 'Internal'}</div>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-slate-600">
+                          {card.holderEmail || '-'}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold text-[11px] border border-blue-100">
+                            {card.areaKerja || '-'}
+                          </span>
+                        </td>
+
+                        {/* Status Jatah Makan */}
+                        <td className="py-3 px-2 text-center">
+                          {card.claimedMeals?.pagi?.claimed ? (
+                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Sudah</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onClaimMeal(card.id, 'pagi')}
+                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                            >
+                              + Klaim
+                            </button>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-2 text-center">
+                          {card.claimedMeals?.siang?.claimed ? (
+                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Sudah</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onClaimMeal(card.id, 'siang')}
+                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                            >
+                              + Klaim
+                            </button>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-2 text-center">
+                          {card.claimedMeals?.malam?.claimed ? (
+                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Sudah</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onClaimMeal(card.id, 'malam')}
+                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                            >
+                              + Klaim
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Aksi */}
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end space-x-1.5">
+                            <button
+                              onClick={() => onOpenDigitalQrModal(card)}
+                              title="Lihat Kupon QR Digital"
+                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
+                            >
+                              <Smartphone className="w-3 h-3" />
+                              <span>QR Digital</span>
+                            </button>
+
+                            <button
+                              onClick={() => onOpenPrintModal(card.id)}
+                              title="Cetak ID Card Fisik"
+                              className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition-colors"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: MASTER ALOKASI PIC & JADWAL KEHADIRAN (EXISTING TABLE) */}
       {subTab === 'master_pic' && (
         <div className="space-y-4">
           {/* Filter Bar */}

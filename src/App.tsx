@@ -13,7 +13,7 @@ import { DigitalPickupQrModal } from './components/DigitalPickupQrModal';
 import { PrintableIdCardsModal } from './components/PrintableIdCardsModal';
 import { StaticActivationQrModal } from './components/StaticActivationQrModal';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
-import { isSupabaseConfigured } from './lib/supabase';
+import { isSupabaseConfigured, getSupabase } from './lib/supabase';
 import { 
   fetchIdCardsFromSupabase, 
   upsertIdCardToSupabase, 
@@ -159,13 +159,22 @@ export default function App() {
     localStorage.setItem('hbd_id_cards', JSON.stringify(idCards));
   }, [idCards]);
 
-  // Initial cloud sync from Supabase if configured
+  // Helper to safely merge cloud cards with local state
+  const mergeCards = (localList: IDCardKonsumsi[], cloudList: IDCardKonsumsi[]): IDCardKonsumsi[] => {
+    const map = new Map<string, IDCardKonsumsi>();
+    localList.forEach((c) => map.set(c.id, c));
+    cloudList.forEach((c) => map.set(c.id, c));
+    return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+  };
+
+  // Initial cloud sync & Real-time multi-device subscription from Supabase
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
+    // 1. Initial Load
     fetchIdCardsFromSupabase().then((cloudCards) => {
       if (cloudCards && cloudCards.length > 0) {
-        setIdCards(cloudCards);
+        setIdCards((prev) => mergeCards(prev, cloudCards));
       }
     });
 
@@ -180,6 +189,55 @@ export default function App() {
         setVouchers(cloudVouchers);
       }
     });
+
+    // 2. Real-time Channel Subscriptions
+    const client = getSupabase();
+    if (!client) return;
+
+    const idCardChannel = client
+      .channel('realtime_id_cards')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'id_cards_konsumsi' },
+        () => {
+          fetchIdCardsFromSupabase().then((cloudCards) => {
+            if (cloudCards && cloudCards.length > 0) {
+              setIdCards((prev) => mergeCards(prev, cloudCards));
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    const hariHChannel = client
+      .channel('realtime_hari_h')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'hari_h_distributions' },
+        () => {
+          fetchHariHFromSupabase().then((cloudHariH) => {
+            if (cloudHariH && cloudHariH.length > 0) {
+              setHariHGroups(cloudHariH);
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    // 3. Heartbeat polling every 8s as fallback
+    const interval = setInterval(() => {
+      fetchIdCardsFromSupabase().then((cloudCards) => {
+        if (cloudCards && cloudCards.length > 0) {
+          setIdCards((prev) => mergeCards(prev, cloudCards));
+        }
+      });
+    }, 8000);
+
+    return () => {
+      client.removeChannel(idCardChannel);
+      client.removeChannel(hariHChannel);
+      clearInterval(interval);
+    };
   }, []);
 
   // Auto-detect ?aktivasi=true or #aktivasi in URL (when panitia scans the static QR code with phone camera)

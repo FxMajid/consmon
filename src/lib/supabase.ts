@@ -1,8 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// Helper to strip accidental prefixes like "VITE_SUPABASE_URL=", extra quotes, and trailing spaces
+const sanitizeEnvVal = (val?: string): string => {
+  if (!val) return '';
+  return val
+    .trim()
+    .replace(/^[A-Z_]+=\s*/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+};
+
 // Retrieve credentials safely from client-side environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabaseUrl = sanitizeEnvVal(rawUrl);
+export const supabaseAnonKey = sanitizeEnvVal(rawKey);
 
 let supabaseInstance: SupabaseClient | null = null;
 

@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Monitoring Distribusi Konsumsi HBD",
+  "description": "Sistem monitoring distribusi dan pengambilan konsumsi panitia dan eksternal HBD dengan sistem voucher H-2 & H-1 serta rincian menu terjadwal Hari H.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

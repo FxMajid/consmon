@@ -195,39 +195,21 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       group_name: group.groupName,
       pic_name: group.picName,
       pic_phone: group.picPhone || null,
-      category: group.category,
       pagi_qty: group.pagiQty,
       pagi_menu: group.pagiMenu,
       pagi_status: group.pagiStatus,
       pagi_picked_at: group.pagiPickedAt || null,
       pagi_receiver: group.pagiReceiver || null,
-      snack_pagi_qty: group.snackPagiQty,
-      snack_pagi_menu: group.snackPagiMenu,
-      snack_pagi_status: group.snackPagiStatus,
-      snack_pagi_picked_at: group.snackPagiPickedAt || null,
-      snack_pagi_receiver: group.snackPagiReceiver || null,
       siang_qty: group.siangQty,
       siang_menu: group.siangMenu,
       siang_status: group.siangStatus,
       siang_picked_at: group.siangPickedAt || null,
       siang_receiver: group.siangReceiver || null,
-      snack_siang_qty: group.snackSiangQty,
-      snack_siang_menu: group.snackSiangMenu,
-      snack_siang_status: group.snackSiangStatus,
-      snack_siang_picked_at: group.snackSiangPickedAt || null,
-      snack_siang_receiver: group.snackSiangReceiver || null,
-      minuman_qty: group.minumanQty,
-      minuman_menu: group.minumanMenu,
-      minuman_status: group.minumanStatus,
-      minuman_picked_at: group.minumanPickedAt || null,
-      minuman_receiver: group.minumanReceiver || null,
       malam_qty: group.malamQty,
       malam_menu: group.malamMenu,
       malam_status: group.malamStatus,
       malam_picked_at: group.malamPickedAt || null,
       malam_receiver: group.malamReceiver || null,
-      total_amount: group.totalAmount,
-      notes: group.notes || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -239,6 +221,47 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
     return true;
   } catch (err) {
     console.error('[Supabase] Exception upserting Hari H group:', err);
+    return false;
+  }
+}
+
+export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]): Promise<boolean> {
+  const client = getSupabase();
+  if (!client || groups.length === 0) return false;
+
+  try {
+    const payloads = groups.map((group) => ({
+      id: group.id,
+      no: group.no,
+      group_name: group.groupName,
+      pic_name: group.picName,
+      pic_phone: group.picPhone || null,
+      pagi_qty: group.pagiQty,
+      pagi_menu: group.pagiMenu,
+      pagi_status: group.pagiStatus,
+      pagi_picked_at: group.pagiPickedAt || null,
+      pagi_receiver: group.pagiReceiver || null,
+      siang_qty: group.siangQty,
+      siang_menu: group.siangMenu,
+      siang_status: group.siangStatus,
+      siang_picked_at: group.siangPickedAt || null,
+      siang_receiver: group.siangReceiver || null,
+      malam_qty: group.malamQty,
+      malam_menu: group.malamMenu,
+      malam_status: group.malamStatus,
+      malam_picked_at: group.malamPickedAt || null,
+      malam_receiver: group.malamReceiver || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error } = await client.from('hari_h_distributions').upsert(payloads);
+    if (error) {
+      console.warn('[Supabase] Bulk upsert Hari H error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Bulk upsert Hari H exception:', err);
     return false;
   }
 }
@@ -271,15 +294,14 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
       groupName: v.group_name,
       picName: v.pic_name,
       picPhone: v.pic_phone || '',
-      mealType: (v.meal_type || 'Makan Siang') as 'Makan Siang' | 'Makan Malam' | 'Minuman',
+      mealType: 'Makan Siang' as const,
       qty: v.qty,
       menuVendor: v.menu_vendor,
-      unitPrice: v.unit_price || 0,
-      totalPrice: v.total_price || (v.qty * (v.unit_price || 0)),
+      unitPrice: 0,
+      totalPrice: 0,
       status: (v.status || 'pending') as 'pending' | 'claimed' | 'cancelled',
       claimedAt: v.claimed_at || undefined,
       receiverName: v.receiver_name || undefined,
-      notes: v.notes || undefined,
       voucherCode: v.voucher_code || undefined,
     }));
   } catch (err) {
@@ -300,15 +322,11 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
       group_name: voucher.groupName,
       pic_name: voucher.picName,
       pic_phone: voucher.picPhone || null,
-      meal_type: voucher.mealType,
       qty: voucher.qty,
       menu_vendor: voucher.menuVendor,
-      unit_price: voucher.unitPrice,
-      total_price: voucher.totalPrice,
       status: voucher.status,
       claimed_at: voucher.claimedAt || null,
       receiver_name: voucher.receiverName || null,
-      notes: voucher.notes || null,
       voucher_code: voucher.voucherCode || null,
       updated_at: new Date().toISOString(),
     };
@@ -321,6 +339,39 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
     return true;
   } catch (err) {
     console.error('[Supabase] Exception upserting voucher:', err);
+    return false;
+  }
+}
+
+export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistributionItem[]): Promise<boolean> {
+  const client = getSupabase();
+  if (!client || vouchers.length === 0) return false;
+
+  try {
+    const payloads = vouchers.map((voucher) => ({
+      id: voucher.id,
+      day: voucher.day,
+      group_no: voucher.groupNo,
+      group_name: voucher.groupName,
+      pic_name: voucher.picName,
+      pic_phone: voucher.picPhone || null,
+      qty: voucher.qty,
+      menu_vendor: voucher.menuVendor,
+      status: voucher.status,
+      claimed_at: voucher.claimedAt || null,
+      receiver_name: voucher.receiverName || null,
+      voucher_code: voucher.voucherCode || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error } = await client.from('vouchers').upsert(payloads);
+    if (error) {
+      console.warn('[Supabase] Bulk upsert vouchers error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Bulk upsert vouchers exception:', err);
     return false;
   }
 }

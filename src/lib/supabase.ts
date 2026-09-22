@@ -10,9 +10,16 @@ const sanitizeEnvVal = (val?: string): string => {
     .trim();
 };
 
-// Retrieve credentials safely from client-side environment variables
-const rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Retrieve credentials safely from client-side or server environment variables
+const rawUrl = 
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 
+  (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_URL) || 
+  '';
+
+const rawKey = 
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 
+  (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_ANON_KEY) || 
+  '';
 
 export const supabaseUrl = sanitizeEnvVal(rawUrl);
 export const supabaseAnonKey = sanitizeEnvVal(rawKey);

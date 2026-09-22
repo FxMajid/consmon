@@ -20,7 +20,8 @@ import {
   Share2,
   Scan,
   QrCode,
-  Sparkles
+  Sparkles,
+  Upload
 } from 'lucide-react';
 import { getBarcodeForSlot, getBarcodeForGroupGeneral } from '../utils/barcodeUtils';
 
@@ -29,6 +30,7 @@ interface HariHMonitorProps {
   onToggleStatus: (groupId: string, slot: MealTimeSlot, currentStatus: string) => void;
   onBatchCompleteSlot: (slot: MealTimeSlot) => void;
   onOpenScanner: () => void;
+  onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
   onOpenBarcodeCard: (data: {
     groupName: string;
     picName: string;
@@ -47,6 +49,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
   onToggleStatus,
   onBatchCompleteSlot,
   onOpenScanner,
+  onOpenImport,
   onOpenBarcodeCard
 }) => {
   const [selectedSlot, setSelectedSlot] = useState<MealTimeSlot | 'all'>('siang');
@@ -371,6 +374,17 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
+          {onOpenImport && (
+            <button
+              onClick={() => onOpenImport('hari_h')}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold shadow-2xs transition-all text-xs"
+              title="Import Data Distribusi Hari H (CSV/Excel) ke Database Supabase"
+            >
+              <Upload className="w-4 h-4 text-indigo-600" />
+              <span>Import Data Hari H</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenScanner}
             className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold shadow-xs transition-all text-xs"

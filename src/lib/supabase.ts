@@ -10,32 +10,47 @@ const sanitizeEnvVal = (val?: string): string => {
     .trim();
 };
 
-// Retrieve credentials safely from client-side or server environment variables
-const rawUrl = 
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 
-  (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_URL) || 
-  '';
+export const getSupabaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('hbd_supabase_url');
+    if (local) return sanitizeEnvVal(local);
+  }
+  const envUrl = 
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 
+    (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_URL) || 
+    '';
+  return sanitizeEnvVal(envUrl);
+};
 
-const rawKey = 
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 
-  (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_ANON_KEY) || 
-  '';
+export const getSupabaseAnonKey = (): string => {
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('hbd_supabase_anon_key');
+    if (local) return sanitizeEnvVal(local);
+  }
+  const envKey = 
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 
+    (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_ANON_KEY) || 
+    '';
+  return sanitizeEnvVal(envKey);
+};
 
-export const supabaseUrl = sanitizeEnvVal(rawUrl);
-export const supabaseAnonKey = sanitizeEnvVal(rawKey);
+export const supabaseUrl = getSupabaseUrl();
+export const supabaseAnonKey = getSupabaseAnonKey();
 
 let supabaseInstance: SupabaseClient | null = null;
 
 /**
- * Checks if Supabase credentials have been configured in the environment.
+ * Checks if Supabase credentials have been configured in the environment or localStorage.
  */
 export const isSupabaseConfigured = (): boolean => {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
   return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl !== 'https://your-project.supabase.co' &&
-    supabaseAnonKey !== 'your-anon-key' &&
-    supabaseUrl.startsWith('https://')
+    url &&
+    key &&
+    url !== 'https://your-project.supabase.co' &&
+    key !== 'your-anon-key' &&
+    url.startsWith('https://')
   );
 };
 
@@ -47,8 +62,11 @@ export const getSupabase = (): SupabaseClient | null => {
     return null;
   }
 
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+
   if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient(url, key, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -59,18 +77,43 @@ export const getSupabase = (): SupabaseClient | null => {
   return supabaseInstance;
 };
 
+export const saveSupabaseConfig = (url: string, anonKey: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  const cleanUrl = sanitizeEnvVal(url);
+  const cleanKey = sanitizeEnvVal(anonKey);
+  if (!cleanUrl || !cleanKey || !cleanUrl.startsWith('https://')) return false;
+
+  localStorage.setItem('hbd_supabase_url', cleanUrl);
+  localStorage.setItem('hbd_supabase_anon_key', cleanKey);
+  supabaseInstance = null; // reset cached instance
+  return true;
+};
+
+export const clearSupabaseConfig = (): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('hbd_supabase_url');
+    localStorage.removeItem('hbd_supabase_anon_key');
+  }
+  supabaseInstance = null;
+};
+
 export const supabase = getSupabase();
 
 export interface SupabaseConfigStatus {
   isConfigured: boolean;
   url: string;
   hasAnonKey: boolean;
+  isCustomLocal: boolean;
 }
 
 export const getSupabaseConfigStatus = (): SupabaseConfigStatus => {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+  const isCustom = typeof window !== 'undefined' && Boolean(localStorage.getItem('hbd_supabase_url'));
   return {
     isConfigured: isSupabaseConfigured(),
-    url: supabaseUrl || '',
-    hasAnonKey: Boolean(supabaseAnonKey),
+    url: url || '',
+    hasAnonKey: Boolean(key),
+    isCustomLocal: isCustom,
   };
 };

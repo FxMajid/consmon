@@ -13,6 +13,7 @@ import { DigitalPickupQrModal } from './components/DigitalPickupQrModal';
 import { PrintableIdCardsModal } from './components/PrintableIdCardsModal';
 import { StaticActivationQrModal } from './components/StaticActivationQrModal';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { DataImportModal, ImportCategory } from './components/DataImportModal';
 import { isSupabaseConfigured, getSupabase } from './lib/supabase';
 import { 
   fetchIdCardsFromSupabase, 
@@ -108,6 +109,54 @@ export default function App() {
 
   // Modal state for Supabase Database Configuration & Status
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+
+  // Modal state for Data Import (CSV/TSV/JSON -> Supabase & Local)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importModalCategory, setImportModalCategory] = useState<ImportCategory>('id_cards');
+
+  const handleOpenImport = (category?: ImportCategory) => {
+    setImportModalCategory(category || 'id_cards');
+    setIsImportModalOpen(true);
+  };
+
+  const handleImportIdCards = (newCards: IDCardKonsumsi[], mode: 'replace' | 'merge') => {
+    if (mode === 'replace') {
+      setIdCards(newCards);
+    } else {
+      setIdCards((prev) => {
+        const map = new Map<string, IDCardKonsumsi>();
+        prev.forEach((c) => map.set(c.id, c));
+        newCards.forEach((c) => map.set(c.id, c));
+        return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+      });
+    }
+  };
+
+  const handleImportHariH = (newGroups: HariHGroupDistribution[], mode: 'replace' | 'merge') => {
+    if (mode === 'replace') {
+      setHariHGroups(newGroups);
+    } else {
+      setHariHGroups((prev) => {
+        const map = new Map<string, HariHGroupDistribution>();
+        prev.forEach((g) => map.set(g.id || String(g.no), g));
+        newGroups.forEach((g) => map.set(g.id || String(g.no), g));
+        return Array.from(map.values()).sort((a, b) => a.no - b.no);
+      });
+    }
+  };
+
+  const handleImportVouchers = (newVouchers: VoucherDistributionItem[], mode: 'replace' | 'merge') => {
+    if (mode === 'replace') {
+      setVouchers(newVouchers);
+    } else {
+      setVouchers((prev) => {
+        const map = new Map<string, VoucherDistributionItem>();
+        prev.forEach((v) => map.set(v.id, v));
+        newVouchers.forEach((v) => map.set(v.id, v));
+        return Array.from(map.values());
+      });
+    }
+  };
 
   // Modal state for detailed check-in
   const [modalData, setModalData] = useState<{
@@ -694,6 +743,7 @@ export default function App() {
         onExportCsv={handleExportCsv}
         onOpenScanner={() => setIsScannerOpen(true)}
         onOpenSupabaseConfig={() => setIsSupabaseModalOpen(true)}
+        onOpenImport={handleOpenImport}
       />
 
       {/* Main Content Area */}
@@ -704,6 +754,7 @@ export default function App() {
             onToggleStatus={handleToggleHariHStatus}
             onBatchCompleteSlot={handleBatchCompleteSlot}
             onOpenScanner={() => setIsScannerOpen(true)}
+            onOpenImport={handleOpenImport}
             onOpenBarcodeCard={(data) => setBarcodeCardData(data)}
           />
         )}
@@ -714,6 +765,7 @@ export default function App() {
             onToggleVoucherStatus={handleToggleVoucherStatus}
             onBatchClaimDay={handleBatchClaimDay}
             onOpenScanner={() => setIsScannerOpen(true)}
+            onOpenImport={handleOpenImport}
             onOpenBarcodeCard={(data) => setBarcodeCardData(data)}
           />
         )}
@@ -727,6 +779,7 @@ export default function App() {
             onOpenPrintModal={(cardId) => setPrintCardsModalState({ isOpen: true, selectedCardId: cardId })}
             onOpenStaticQrModal={() => setIsStaticQrModalOpen(true)}
             onOpenScanner={() => setIsScannerOpen(true)}
+            onOpenImport={handleOpenImport}
             onClaimMeal={handleClaimIdCardMeal}
           />
         )}
@@ -836,6 +889,19 @@ export default function App() {
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}
         idCards={idCards}
+      />
+
+      {/* Modal Import Data (CSV/TSV/JSON ke Supabase & Local State) */}
+      <DataImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        initialCategory={importModalCategory}
+        onImportIdCards={handleImportIdCards}
+        onImportHariH={handleImportHariH}
+        onImportVouchers={handleImportVouchers}
+        currentIdCardsCount={idCards.length}
+        currentHariHCount={hariHGroups.length}
+        currentVouchersCount={vouchers.length}
       />
     </div>
   );

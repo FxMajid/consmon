@@ -12,7 +12,8 @@ import {
   Building,
   CheckCheck,
   Scan,
-  QrCode
+  QrCode,
+  Upload
 } from 'lucide-react';
 import { getBarcodeForVoucher } from '../utils/barcodeUtils';
 
@@ -21,6 +22,7 @@ interface VoucherMonitorProps {
   onToggleVoucherStatus: (id: string, currentStatus: string) => void;
   onBatchClaimDay: (day: 'H-2' | 'H-1') => void;
   onOpenScanner: () => void;
+  onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
   onOpenBarcodeCard: (data: {
     groupName: string;
     picName: string;
@@ -39,6 +41,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
   onToggleVoucherStatus,
   onBatchClaimDay,
   onOpenScanner,
+  onOpenImport,
   onOpenBarcodeCard
 }) => {
   const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'all'>('H-1');
@@ -241,6 +244,17 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 text-xs flex-wrap gap-y-2">
+          {onOpenImport && (
+            <button
+              onClick={() => onOpenImport('vouchers')}
+              className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold transition-colors shadow-2xs"
+              title="Import Data Voucher (CSV/Excel) ke Database Supabase"
+            >
+              <Upload className="w-3.5 h-3.5 text-amber-600" />
+              <span>Import Data Voucher</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenScanner}
             className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold transition-colors shadow-2xs"

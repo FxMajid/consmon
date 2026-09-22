@@ -24,6 +24,7 @@ import {
   Filter,
   Activity,
   Download,
+  Upload,
   Radio,
   Clock
 } from 'lucide-react';
@@ -36,6 +37,7 @@ interface KartuAksesTableProps {
   onOpenPrintModal: (cardId?: string) => void;
   onOpenStaticQrModal?: () => void;
   onOpenScanner: () => void;
+  onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
   onClaimMeal: (cardId: string, meal: 'pagi' | 'siang' | 'malam') => void;
 }
 
@@ -47,6 +49,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
   onOpenPrintModal,
   onOpenStaticQrModal,
   onOpenScanner,
+  onOpenImport,
   onClaimMeal,
 }) => {
   const [subTab, setSubTab] = useState<'id_cards' | 'monitoring_live' | 'master_pic'>('id_cards');
@@ -447,6 +450,17 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                 <Scan className="w-4 h-4 text-red-400" />
                 <span>Scan Barcode / QR</span>
               </button>
+
+              {onOpenImport && (
+                <button
+                  onClick={() => onOpenImport('id_cards')}
+                  className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors shadow-2xs"
+                  title="Import CSV/Excel ID Card & Panitia ke Database Supabase"
+                >
+                  <Upload className="w-4 h-4 text-indigo-600" />
+                  <span>Import Data ID Card</span>
+                </button>
+              )}
 
               <button
                 onClick={() => onOpenPrintModal()}

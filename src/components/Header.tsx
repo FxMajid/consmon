@@ -9,6 +9,7 @@ import {
   CheckCircle2, 
   Clock, 
   Download,
+  Upload,
   Scan,
   Database
 } from 'lucide-react';
@@ -26,6 +27,7 @@ interface HeaderProps {
   };
   onResetData: () => void;
   onExportCsv: () => void;
+  onOpenImport?: () => void;
   onOpenScanner: () => void;
   onOpenSupabaseConfig?: () => void;
 }
@@ -36,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   stats,
   onResetData,
   onExportCsv,
+  onOpenImport,
   onOpenScanner,
   onOpenSupabaseConfig,
 }) => {
@@ -113,6 +116,18 @@ export const Header: React.FC<HeaderProps> = ({
                       isCloudActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
                     }`}
                   />
+                </button>
+              )}
+
+              {onOpenImport && (
+                <button
+                  id="btn-import-data"
+                  onClick={onOpenImport}
+                  title="Import data CSV / Excel ke Database Supabase"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold transition-colors shadow-2xs"
+                >
+                  <Upload className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="hidden sm:inline">Import Data</span>
                 </button>
               )}
 

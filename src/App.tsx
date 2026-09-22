@@ -46,7 +46,11 @@ export default function App() {
     const saved = localStorage.getItem('hbd_hari_h_groups');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.some((g: HariHGroupDistribution) => g.id === 'h-grp-1' && g.groupName === 'Panitia MD')) {
+          return INITIAL_HARI_H_GROUPS;
+        }
+        return parsed;
       } catch (e) {
         console.error('Error parsing saved hari_h groups', e);
       }

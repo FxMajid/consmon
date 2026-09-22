@@ -225,6 +225,22 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
   }
 }
 
+export async function deleteHariHGroupFromSupabase(id: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('hari_h_distributions').delete().eq('id', id);
+    if (error) {
+      console.warn('[Supabase] Error deleting Hari H group:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Exception deleting Hari H group:', err);
+    return false;
+  }
+}
+
 export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]): Promise<boolean> {
   const client = getSupabase();
   if (!client || groups.length === 0) return false;
@@ -241,11 +257,26 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
       pagi_status: group.pagiStatus,
       pagi_picked_at: group.pagiPickedAt || null,
       pagi_receiver: group.pagiReceiver || null,
+      snack_pagi_qty: group.snackPagiQty || 0,
+      snack_pagi_menu: group.snackPagiMenu || '',
+      snack_pagi_status: group.snackPagiStatus || 'pending',
+      snack_pagi_picked_at: group.snackPagiPickedAt || null,
+      snack_pagi_receiver: group.snackPagiReceiver || null,
       siang_qty: group.siangQty,
       siang_menu: group.siangMenu,
       siang_status: group.siangStatus,
       siang_picked_at: group.siangPickedAt || null,
       siang_receiver: group.siangReceiver || null,
+      snack_siang_qty: group.snackSiangQty || 0,
+      snack_siang_menu: group.snackSiangMenu || '',
+      snack_siang_status: group.snackSiangStatus || 'pending',
+      snack_siang_picked_at: group.snackSiangPickedAt || null,
+      snack_siang_receiver: group.snackSiangReceiver || null,
+      minuman_qty: group.minumanQty || 0,
+      minuman_menu: group.minumanMenu || '',
+      minuman_status: group.minumanStatus || 'pending',
+      minuman_picked_at: group.minumanPickedAt || null,
+      minuman_receiver: group.minumanReceiver || null,
       malam_qty: group.malamQty,
       malam_menu: group.malamMenu,
       malam_status: group.malamStatus,

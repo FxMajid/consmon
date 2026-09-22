@@ -20,6 +20,8 @@ import {
   upsertIdCardToSupabase, 
   fetchHariHFromSupabase, 
   upsertHariHToSupabase, 
+  bulkUpsertHariHToSupabase,
+  deleteHariHGroupFromSupabase,
   fetchVouchersFromSupabase, 
   upsertVoucherToSupabase 
 } from './lib/supabaseService';
@@ -47,7 +49,12 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.some((g: HariHGroupDistribution) => g.id === 'h-grp-1' && g.groupName === 'Panitia MD')) {
+        if (
+          Array.isArray(parsed) &&
+          (parsed.some((g: any) => g.id === 'h-grp-1' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
+            parsed.length < 30)
+        ) {
+          localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
           return INITIAL_HARI_H_GROUPS;
         }
         return parsed;
@@ -231,9 +238,22 @@ export default function App() {
       }
     });
 
-    fetchHariHFromSupabase().then((cloudHariH) => {
+    fetchHariHFromSupabase().then(async (cloudHariH) => {
       if (cloudHariH && cloudHariH.length > 0) {
-        setHariHGroups(cloudHariH);
+        if (
+          cloudHariH.some((g) => g.id === 'h-grp-1' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
+          cloudHariH.length < 30
+        ) {
+          // Obsolete combined Panitia MD row found in Supabase - auto-migrate to detailed PIC groups
+          await deleteHariHGroupFromSupabase('h-grp-1');
+          await bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
+          setHariHGroups(INITIAL_HARI_H_GROUPS);
+          localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
+        } else {
+          setHariHGroups(cloudHariH);
+        }
+      } else {
+        bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
       }
     });
 

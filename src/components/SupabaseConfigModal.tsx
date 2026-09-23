@@ -14,7 +14,8 @@ import {
   Globe,
   Trash2,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   isSupabaseConfigured, 
@@ -156,6 +157,10 @@ CREATE TABLE IF NOT EXISTS public.vouchers (
     pic_phone TEXT,
     qty INTEGER NOT NULL DEFAULT 0,
     menu_vendor TEXT NOT NULL,
+    meal_type TEXT DEFAULT 'Makan Siang',
+    unit_price INTEGER DEFAULT 0,
+    total_price INTEGER DEFAULT 0,
+    notes TEXT,
     status TEXT NOT NULL DEFAULT 'unclaimed',
     claimed_at TEXT,
     receiver_name TEXT,
@@ -163,19 +168,24 @@ CREATE TABLE IF NOT EXISTS public.vouchers (
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Row Level Security (RLS) & Akses Publik
+-- Berikan izin penuh (SELECT, INSERT, UPDATE, DELETE) untuk role anon dan authenticated
+GRANT ALL ON TABLE public.id_cards_konsumsi TO anon, authenticated;
+GRANT ALL ON TABLE public.hari_h_distributions TO anon, authenticated;
+GRANT ALL ON TABLE public.vouchers TO anon, authenticated;
+
+-- Row Level Security (RLS) & Kebijakan Akses Publik
 ALTER TABLE public.id_cards_konsumsi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hari_h_distributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vouchers ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public access id_cards" ON public.id_cards_konsumsi;
-CREATE POLICY "Public access id_cards" ON public.id_cards_konsumsi FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public access id_cards" ON public.id_cards_konsumsi FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public access hari_h" ON public.hari_h_distributions;
-CREATE POLICY "Public access hari_h" ON public.hari_h_distributions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public access hari_h" ON public.hari_h_distributions FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public access vouchers" ON public.vouchers;
-CREATE POLICY "Public access vouchers" ON public.vouchers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public access vouchers" ON public.vouchers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.id_cards_konsumsi;
@@ -426,6 +436,17 @@ CREATE TABLE IF NOT EXISTS public.id_cards_konsumsi (
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );`}</pre>
             </div>
+          </div>
+
+          {/* Delete Permission Note */}
+          <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 text-xs space-y-1 text-amber-900">
+            <div className="font-bold flex items-center space-x-1.5 text-amber-950">
+              <ShieldAlert className="w-4 h-4 text-amber-700" />
+              <span>Penting: Izin Hapus Data (DELETE) di Supabase</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-amber-900">
+              Jika tombol hapus data (ikon tong sampah) belum menghapus baris di Supabase Table Editor, hal ini disebabkan oleh <strong>Row Level Security (RLS)</strong> di Supabase yang belum memberi izin aksi <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[10px]">DELETE</code> untuk role anon. Pastikan Anda menjalankan perintah <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[10px]">GRANT ALL</code> &amp; <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[10px]">CREATE POLICY ... FOR ALL</code> dari script SQL di atas pada <strong>SQL Editor</strong> Supabase Anda.
+            </p>
           </div>
 
           {/* Initial Data Seed Button */}

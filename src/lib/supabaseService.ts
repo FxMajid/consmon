@@ -447,20 +447,50 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
   }
 }
 
-export async function deleteVoucherFromSupabase(id: string): Promise<boolean> {
+export async function deleteVoucherFromSupabase(
+  itemOrId: string | { id: string; voucherCode?: string }
+): Promise<{ success: boolean; error?: string }> {
   const client = getSupabase();
-  if (!client) return false;
+  if (!client) {
+    console.warn('[Supabase] Client not initialized, skipping deletion from DB');
+    return { success: false, error: 'Koneksi Supabase belum aktif atau URL/Key belum dikonfigurasi.' };
+  }
+
+  const id = typeof itemOrId === 'string' ? itemOrId : itemOrId.id;
+  const voucherCode = typeof itemOrId === 'object' ? itemOrId.voucherCode : undefined;
 
   try {
-    const { error } = await client.from('vouchers').delete().eq('id', id);
+    // 1. Try deleting by primary key id
+    const { data, error } = await client
+      .from('vouchers')
+      .delete()
+      .eq('id', id)
+      .select();
+
     if (error) {
-      console.warn('[Supabase] Error deleting voucher:', error.message);
-      return false;
+      console.warn(`[Supabase] Error deleting voucher id "${id}":`, error.message);
+      return { success: false, error: error.message };
     }
-    return true;
-  } catch (err) {
+
+    // 2. If no rows matched by ID and voucherCode is provided, try deleting by voucher_code
+    if ((!data || data.length === 0) && voucherCode) {
+      const codeRes = await client
+        .from('vouchers')
+        .delete()
+        .eq('voucher_code', voucherCode)
+        .select();
+
+      if (codeRes.error) {
+        console.warn(`[Supabase] Error deleting voucher by code "${voucherCode}":`, codeRes.error.message);
+        return { success: false, error: codeRes.error.message };
+      }
+    }
+
+    console.log(`[Supabase] Successfully deleted voucher from database: ${id}`);
+    return { success: true };
+  } catch (err: any) {
     console.error('[Supabase] Exception deleting voucher:', err);
-    return false;
+    return { success: false, error: err?.message || 'Terjadi kesalahan sistem saat menghapus data di Supabase.' };
   }
 }
 

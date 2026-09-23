@@ -312,19 +312,14 @@ export default function App() {
           await deleteVoucherFromSupabase('vouch-h1-md-1');
         }
 
-        const hasCorruptedState = cloudVouchers.some(
-          (v) => (v.id === 'vouch-h1-1-malam' && v.mealType !== 'Makan Malam') || v.totalPrice === 0
-        );
-
-        if (!cloudVouchers.some((v) => v.id === 'vouch-h2-1' && v.picName === '16 PIC') || hasCorruptedState) {
-          await bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
-          setVouchers(INITIAL_VOUCHER_DATA);
-          localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
-        } else {
-          setVouchers(cloudVouchers);
-        }
+        // Always honor current cloud vouchers from database
+        setVouchers(cloudVouchers);
+        localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
       } else {
-        bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
+        // Seed initial data only if table is completely empty
+        await bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
+        setVouchers(INITIAL_VOUCHER_DATA);
+        localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
       }
     });
 
@@ -628,12 +623,30 @@ export default function App() {
   };
 
   const handleDeleteVoucher = async (id: string) => {
+    const targetItem = vouchers.find((v) => v.id === id);
+
+    // Optimistically update local state
     setVouchers((prev) => {
       const updated = prev.filter((v) => v.id !== id);
       localStorage.setItem('hbd_vouchers', JSON.stringify(updated));
       return updated;
     });
-    await deleteVoucherFromSupabase(id);
+
+    if (isSupabaseConfigured()) {
+      const res = await deleteVoucherFromSupabase(targetItem || id);
+      if (!res.success) {
+        alert(
+          `Gagal menghapus data dari Supabase Cloud Database:\n\n${res.error || 'Terjadi kesalahan sistem'}\n\n` +
+          `Catatan: Pastikan policy Row Level Security (RLS) di tabel 'vouchers' Supabase Anda mengizinkan operasi DELETE untuk role anon / authenticated.`
+        );
+        // Rollback state if database deletion failed so user knows
+        const freshCloud = await fetchVouchersFromSupabase();
+        if (freshCloud) {
+          setVouchers(freshCloud);
+          localStorage.setItem('hbd_vouchers', JSON.stringify(freshCloud));
+        }
+      }
+    }
   };
 
   // Scanner Pickup Handlers

@@ -738,8 +738,9 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3 px-3 w-12 text-center">No</th>
-                    <th className="py-3 px-3 min-w-[220px]">Kelompok / Divisi</th>
+                    <th className="py-3 px-3 min-w-[200px]">Kelompok / Divisi</th>
                     <th className="py-3 px-3 min-w-[140px]">PIC &amp; Kontak</th>
+                    <th className="py-3 px-3 min-w-[180px]">Anggota PIC</th>
                     <th className="py-3 px-3 text-center">Kategori</th>
                     <th className="py-3 px-3 text-center">Pagi</th>
                     <th className="py-3 px-3 text-center">Snk Pagi</th>
@@ -753,13 +754,14 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {filteredHariH.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-8 text-center text-slate-400">
+                      <td colSpan={12} className="py-8 text-center text-slate-400">
                         Tidak ada data yang sesuai filter / pencarian.
                       </td>
                     </tr>
                   ) : (
                     filteredHariH.map((group) => {
                       const totalPorsi = (group.pagiQty || 0) + (group.snackPagiQty || 0) + (group.siangQty || 0) + (group.snackSiangQty || 0) + (group.minumanQty || 0) + (group.malamQty || 0);
+                      const membersList = group.members || (group.notes && group.notes.toLowerCase().includes('anggota') ? group.notes.replace(/^Anggota:\s*/i, '') : undefined);
                       return (
                         <tr key={group.id} className="hover:bg-slate-50/70 transition-colors">
                           <td className="py-3 px-3 text-center font-bold text-slate-700">
@@ -767,12 +769,6 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{group.groupName}</div>
-                            {(group.members || (group.notes && group.notes.toLowerCase().includes('anggota'))) && (
-                              <div className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-1 flex items-center gap-1 max-w-xs truncate" title={group.members || group.notes}>
-                                <Users className="w-3 h-3 text-blue-600 shrink-0" />
-                                <span>Anggota: {group.members || group.notes?.replace(/^Anggota:\s*/i, '')}</span>
-                              </div>
-                            )}
                             {group.notes && !group.notes.toLowerCase().startsWith('anggota:') && (
                               <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs" title={group.notes}>
                                 {group.notes}
@@ -785,6 +781,16 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                               <Phone className="w-3 h-3 text-slate-400" />
                               {group.picPhone || '-'}
                             </div>
+                          </td>
+                          <td className="py-3 px-3 min-w-[180px]">
+                            {membersList ? (
+                              <div className="text-[11px] text-blue-900 bg-blue-50/80 px-2 py-1 rounded-lg border border-blue-200/80 flex items-start gap-1.5" title={membersList}>
+                                <Users className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                                <span className="leading-tight line-clamp-2">{membersList}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-300 text-[11px] italic">-</span>
+                            )}
                           </td>
                           <td className="py-3 px-3 text-center">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -934,6 +940,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                     <th className="py-3 px-3 text-center">Fase</th>
                     <th className="py-3 px-3">Kelompok / Penerima</th>
                     <th className="py-3 px-3">PIC Pengambil</th>
+                    <th className="py-3 px-3 min-w-[160px]">Anggota PIC</th>
                     <th className="py-3 px-3">Waktu &amp; Menu Vendor</th>
                     <th className="py-3 px-3 text-center">Porsi</th>
                     <th className="py-3 px-3 text-right">Harga Satuan</th>
@@ -944,39 +951,45 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {filteredVouchers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-400">
+                      <td colSpan={10} className="py-8 text-center text-slate-400">
                         Tidak ada voucher yang sesuai filter / pencarian.
                       </td>
                     </tr>
                   ) : (
-                    filteredVouchers.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-3 font-mono font-bold text-amber-800">
-                          {v.voucherCode || v.id}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                            {v.day}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-slate-900">
-                          <div>{v.groupName}</div>
-                          {(v.members || (v.notes && v.notes.toLowerCase().includes('anggota'))) && (
-                            <div className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-1 flex items-center gap-1 max-w-xs truncate" title={v.members || v.notes}>
-                              <Users className="w-3 h-3 text-amber-700 shrink-0" />
-                              <span>Anggota: {v.members || v.notes?.replace(/^Anggota:\s*/i, '')}</span>
-                            </div>
-                          )}
-                          {v.notes && !v.notes.toLowerCase().startsWith('anggota:') && (
-                            <div className="text-[10px] text-slate-400 mt-0.5 font-normal truncate max-w-xs" title={v.notes}>
-                              {v.notes}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-medium text-slate-800">{v.picName}</div>
-                          <div className="text-[11px] text-slate-500 font-mono">{v.picPhone || '-'}</div>
-                        </td>
+                    filteredVouchers.map((v) => {
+                      const vMembers = v.members || (v.notes && v.notes.toLowerCase().includes('anggota') ? v.notes.replace(/^Anggota:\s*/i, '') : undefined);
+                      return (
+                        <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-amber-800">
+                            {v.voucherCode || v.id}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                              {v.day}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-slate-900">
+                            <div>{v.groupName}</div>
+                            {v.notes && !v.notes.toLowerCase().startsWith('anggota:') && (
+                              <div className="text-[10px] text-slate-400 mt-0.5 font-normal truncate max-w-xs" title={v.notes}>
+                                {v.notes}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-slate-800">{v.picName}</div>
+                            <div className="text-[11px] text-slate-500 font-mono">{v.picPhone || '-'}</div>
+                          </td>
+                          <td className="py-3 px-3 min-w-[160px]">
+                            {vMembers ? (
+                              <div className="text-[11px] text-amber-900 bg-amber-50/80 px-2 py-1 rounded-lg border border-amber-200/80 flex items-start gap-1.5" title={vMembers}>
+                                <Users className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                                <span className="leading-tight line-clamp-2">{vMembers}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-300 text-[11px] italic">-</span>
+                            )}
+                          </td>
                         <td className="py-3 px-3">
                           <div className="font-medium text-slate-900">{v.menuVendor}</div>
                           <div className="text-[10px] text-slate-500">{v.mealType}</div>
@@ -1017,7 +1030,8 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                           </div>
                         </td>
                       </tr>
-                    ))
+                    );
+                  })
                   )}
                 </tbody>
               </table>

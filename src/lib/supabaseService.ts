@@ -168,6 +168,17 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         cat = 'Internal';
       }
 
+      // Extract members and cleaned notes
+      let membersVal = r.members;
+      let notesVal = r.notes;
+      if (!membersVal && notesVal && typeof notesVal === 'string' && notesVal.toLowerCase().includes('anggota:')) {
+        const match = notesVal.match(/Anggota:\s*([^|]+)/i);
+        if (match && match[1]) {
+          membersVal = match[1].trim();
+          notesVal = notesVal.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() || undefined;
+        }
+      }
+
       return {
         id: r.id,
         no: r.no,
@@ -206,8 +217,8 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         malamPickedAt: r.malam_picked_at || undefined,
         malamReceiver: r.malam_receiver || undefined,
         totalAmount: r.total_amount || 0,
-        members: r.members || (r.notes && r.notes.toLowerCase().startsWith('anggota:') ? r.notes.replace(/^Anggota:\s*/i, '') : undefined),
-        notes: r.notes || undefined,
+        members: membersVal || undefined,
+        notes: notesVal || undefined,
       };
     });
   } catch (err) {
@@ -349,7 +360,17 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
 
   try {
     const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
-    const payload = {
+    
+    // Construct robust note with encoded members as backup
+    let computedNotes = group.notes || null;
+    if (group.members && group.members.trim()) {
+      const cleanNote = group.notes ? group.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
+      computedNotes = cleanNote ? `${cleanNote} | Anggota: ${group.members.trim()}` : `Anggota: ${group.members.trim()}`;
+    } else if (computedNotes) {
+      computedNotes = computedNotes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() || null;
+    }
+
+    const payload: Record<string, any> = {
       id: group.id,
       no: group.no,
       group_name: group.groupName,
@@ -386,6 +407,8 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       malam_status: group.malamStatus,
       malam_picked_at: group.malamPickedAt || null,
       malam_receiver: group.malamReceiver || null,
+      members: group.members || null,
+      notes: computedNotes,
       updated_at: new Date().toISOString(),
     };
 
@@ -396,32 +419,11 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       .eq('id', group.id);
 
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const basePayload = {
-        id: group.id,
-        no: group.no,
-        group_name: group.groupName,
-        pic_name: group.picName,
-        pic_phone: group.picPhone || null,
-        pagi_qty: group.pagiQty,
-        pagi_menu: group.pagiMenu,
-        pagi_status: group.pagiStatus,
-        pagi_picked_at: group.pagiPickedAt || null,
-        pagi_receiver: group.pagiReceiver || null,
-        siang_qty: group.siangQty,
-        siang_menu: group.siangMenu,
-        siang_status: group.siangStatus,
-        siang_picked_at: group.siangPickedAt || null,
-        siang_receiver: group.siangReceiver || null,
-        malam_qty: group.malamQty,
-        malam_menu: group.malamMenu,
-        malam_status: group.malamStatus,
-        malam_picked_at: group.malamPickedAt || null,
-        malam_receiver: group.malamReceiver || null,
-        updated_at: new Date().toISOString(),
-      };
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.members;
       const retryUpdate = await client
         .from('hari_h_distributions')
-        .update(basePayload)
+        .update(fallbackPayload)
         .eq('id', group.id);
       error = retryUpdate.error;
     }
@@ -435,30 +437,9 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
     // If update failed, try upsert
     let upsertRes = await client.from('hari_h_distributions').upsert(payload);
     if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache'))) {
-      const basePayload = {
-        id: group.id,
-        no: group.no,
-        group_name: group.groupName,
-        pic_name: group.picName,
-        pic_phone: group.picPhone || null,
-        pagi_qty: group.pagiQty,
-        pagi_menu: group.pagiMenu,
-        pagi_status: group.pagiStatus,
-        pagi_picked_at: group.pagiPickedAt || null,
-        pagi_receiver: group.pagiReceiver || null,
-        siang_qty: group.siangQty,
-        siang_menu: group.siangMenu,
-        siang_status: group.siangStatus,
-        siang_picked_at: group.siangPickedAt || null,
-        siang_receiver: group.siangReceiver || null,
-        malam_qty: group.malamQty,
-        malam_menu: group.malamMenu,
-        malam_status: group.malamStatus,
-        malam_picked_at: group.malamPickedAt || null,
-        malam_receiver: group.malamReceiver || null,
-        updated_at: new Date().toISOString(),
-      };
-      upsertRes = await client.from('hari_h_distributions').upsert(basePayload);
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.members;
+      upsertRes = await client.from('hari_h_distributions').upsert(fallbackPayload);
     }
 
     if (upsertRes.error) {
@@ -497,6 +478,11 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
   try {
     const payloads = groups.map((group) => {
       const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
+      let computedNotes = group.notes || null;
+      if (group.members && group.members.trim()) {
+        const cleanNote = group.notes ? group.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
+        computedNotes = cleanNote ? `${cleanNote} | Anggota: ${group.members.trim()}` : `Anggota: ${group.members.trim()}`;
+      }
       return {
         id: group.id,
         no: group.no,
@@ -534,36 +520,20 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
         malam_status: group.malamStatus,
         malam_picked_at: group.malamPickedAt || null,
         malam_receiver: group.malamReceiver || null,
+        members: group.members || null,
+        notes: computedNotes,
         updated_at: new Date().toISOString(),
       };
     });
 
     let { error } = await client.from('hari_h_distributions').upsert(payloads);
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const basePayloads = groups.map((group) => ({
-        id: group.id,
-        no: group.no,
-        group_name: group.groupName,
-        pic_name: group.picName,
-        pic_phone: group.picPhone || null,
-        pagi_qty: group.pagiQty,
-        pagi_menu: group.pagiMenu,
-        pagi_status: group.pagiStatus,
-        pagi_picked_at: group.pagiPickedAt || null,
-        pagi_receiver: group.pagiReceiver || null,
-        siang_qty: group.siangQty,
-        siang_menu: group.siangMenu,
-        siang_status: group.siangStatus,
-        siang_picked_at: group.siangPickedAt || null,
-        siang_receiver: group.siangReceiver || null,
-        malam_qty: group.malamQty,
-        malam_menu: group.malamMenu,
-        malam_status: group.malamStatus,
-        malam_picked_at: group.malamPickedAt || null,
-        malam_receiver: group.malamReceiver || null,
-        updated_at: new Date().toISOString(),
-      }));
-      const retry = await client.from('hari_h_distributions').upsert(basePayloads);
+      const fallbackPayloads = payloads.map((p) => {
+        const copy = { ...p };
+        delete copy.members;
+        return copy;
+      });
+      const retry = await client.from('hari_h_distributions').upsert(fallbackPayloads);
       if (!retry.error) return true;
       error = retry.error;
     }
@@ -658,6 +628,17 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
         }
       }
 
+      // Extract members and cleaned notes for voucher
+      let vMembersVal = v.members;
+      let vNotesVal = v.notes;
+      if (!vMembersVal && vNotesVal && typeof vNotesVal === 'string' && vNotesVal.toLowerCase().includes('anggota:')) {
+        const match = vNotesVal.match(/Anggota:\s*([^|]+)/i);
+        if (match && match[1]) {
+          vMembersVal = match[1].trim();
+          vNotesVal = vNotesVal.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() || undefined;
+        }
+      }
+
       return {
         id: v.id,
         day: (v.day || 'H-1') as 'H-2' | 'H-1' | 'H+1',
@@ -674,8 +655,8 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
         claimedAt: v.claimed_at || undefined,
         receiverName: v.receiver_name || undefined,
         voucherCode: v.voucher_code || undefined,
-        members: v.members || (v.notes && v.notes.toLowerCase().startsWith('anggota:') ? v.notes.replace(/^Anggota:\s*/i, '') : undefined),
-        notes: v.notes || undefined,
+        members: vMembersVal || undefined,
+        notes: vNotesVal || undefined,
       };
     });
   } catch (err) {
@@ -689,6 +670,12 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
   if (!client) return false;
 
   try {
+    let computedNotes = voucher.notes || null;
+    if (voucher.members && voucher.members.trim()) {
+      const cleanNote = voucher.notes ? voucher.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
+      computedNotes = cleanNote ? `${cleanNote} | Anggota: ${voucher.members.trim()}` : `Anggota: ${voucher.members.trim()}`;
+    }
+
     const payload = {
       id: voucher.id,
       day: voucher.day,
@@ -705,27 +692,15 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
       claimed_at: voucher.claimedAt || null,
       receiver_name: voucher.receiverName || null,
       voucher_code: voucher.voucherCode || null,
-      notes: voucher.notes || null,
+      members: voucher.members || null,
+      notes: computedNotes,
       updated_at: new Date().toISOString(),
     };
 
     let { error } = await client.from('vouchers').upsert(payload);
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const basePayload = {
-        id: voucher.id,
-        day: voucher.day,
-        group_no: voucher.groupNo,
-        group_name: voucher.groupName,
-        pic_name: voucher.picName,
-        pic_phone: voucher.picPhone || null,
-        qty: voucher.qty,
-        menu_vendor: voucher.menuVendor,
-        status: voucher.status,
-        claimed_at: voucher.claimedAt || null,
-        receiver_name: voucher.receiverName || null,
-        voucher_code: voucher.voucherCode || null,
-        updated_at: new Date().toISOString(),
-      };
+      const basePayload = { ...payload };
+      delete (basePayload as any).members;
       const retry = await client.from('vouchers').upsert(basePayload);
       if (!retry.error) return true;
       error = retry.error;
@@ -746,29 +721,13 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
   if (!client || vouchers.length === 0) return false;
 
   try {
-    const payloads = vouchers.map((voucher) => ({
-      id: voucher.id,
-      day: voucher.day,
-      group_no: voucher.groupNo,
-      group_name: voucher.groupName,
-      pic_name: voucher.picName,
-      pic_phone: voucher.picPhone || null,
-      qty: voucher.qty,
-      menu_vendor: voucher.menuVendor,
-      meal_type: voucher.mealType,
-      unit_price: voucher.unitPrice,
-      total_price: voucher.totalPrice,
-      status: voucher.status,
-      claimed_at: voucher.claimedAt || null,
-      receiver_name: voucher.receiverName || null,
-      voucher_code: voucher.voucherCode || null,
-      notes: voucher.notes || null,
-      updated_at: new Date().toISOString(),
-    }));
-
-    let { error } = await client.from('vouchers').upsert(payloads);
-    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const basePayloads = vouchers.map((voucher) => ({
+    const payloads = vouchers.map((voucher) => {
+      let computedNotes = voucher.notes || null;
+      if (voucher.members && voucher.members.trim()) {
+        const cleanNote = voucher.notes ? voucher.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
+        computedNotes = cleanNote ? `${cleanNote} | Anggota: ${voucher.members.trim()}` : `Anggota: ${voucher.members.trim()}`;
+      }
+      return {
         id: voucher.id,
         day: voucher.day,
         group_no: voucher.groupNo,
@@ -777,13 +736,27 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
         pic_phone: voucher.picPhone || null,
         qty: voucher.qty,
         menu_vendor: voucher.menuVendor,
+        meal_type: voucher.mealType,
+        unit_price: voucher.unitPrice,
+        total_price: voucher.totalPrice,
         status: voucher.status,
         claimed_at: voucher.claimedAt || null,
         receiver_name: voucher.receiverName || null,
         voucher_code: voucher.voucherCode || null,
+        members: voucher.members || null,
+        notes: computedNotes,
         updated_at: new Date().toISOString(),
-      }));
-      const retry = await client.from('vouchers').upsert(basePayloads);
+      };
+    });
+
+    let { error } = await client.from('vouchers').upsert(payloads);
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const fallbackPayloads = payloads.map((p) => {
+        const copy = { ...p };
+        delete (copy as any).members;
+        return copy;
+      });
+      const retry = await client.from('vouchers').upsert(fallbackPayloads);
       if (!retry.error) return true;
       error = retry.error;
     }

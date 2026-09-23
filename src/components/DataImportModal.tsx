@@ -256,7 +256,7 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
   const convertToVouchers = (rawList: any[]): VoucherDistributionItem[] => {
     return rawList.map((row, idx) => {
       const id = row.id || `vch-${idx + 1}`;
-      const day = (row.day || row.hari || 'H-1') as 'H-2' | 'H-1';
+      const day = (row.day || row.hari || 'H-1') as 'H-2' | 'H-1' | 'H+1';
       const groupNo = parseInt(row.group_no || row.no || String(idx + 1), 10) || (idx + 1);
       const groupName = row.group_name || row.grup || row.divisi || `Grup ${groupNo}`;
       const picName = row.pic_name || row.pic || 'PIC Lapangan';

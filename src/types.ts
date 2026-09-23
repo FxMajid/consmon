@@ -1,4 +1,4 @@
-export type ActiveDay = 'H' | 'H-1' | 'H-2' | 'ALL';
+export type ActiveDay = 'H' | 'H-1' | 'H-2' | 'H+1' | 'ALL';
 
 export type MealTimeSlot = 'pagi' | 'snack_pagi' | 'siang' | 'snack_siang' | 'minuman' | 'malam';
 
@@ -69,7 +69,7 @@ export interface HariHGroupDistribution {
 
 export interface VoucherDistributionItem {
   id: string;
-  day: 'H-2' | 'H-1';
+  day: 'H-2' | 'H-1' | 'H+1';
   groupNo: number;
   groupName: string;
   picName: string;

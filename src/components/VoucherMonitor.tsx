@@ -21,7 +21,7 @@ import { getBarcodeForVoucher } from '../utils/barcodeUtils';
 interface VoucherMonitorProps {
   vouchers: VoucherDistributionItem[];
   onToggleVoucherStatus: (id: string, currentStatus: string) => void;
-  onBatchClaimDay: (day: 'H-2' | 'H-1') => void;
+  onBatchClaimDay: (day: 'H-2' | 'H-1' | 'H+1') => void;
   onOpenScanner: () => void;
   onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
   onDeleteVoucher?: (id: string) => void;
@@ -47,7 +47,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
   onDeleteVoucher,
   onOpenBarcodeCard
 }) => {
-  const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'all'>('H-1');
+  const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'H+1' | 'all'>('H-1');
   const [selectedMealType, setSelectedMealType] = useState<'all' | 'Makan Siang' | 'Makan Malam' | 'Minuman'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'claimed'>('all');
@@ -108,12 +108,13 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
     const msg = encodeURIComponent(
       `Halo Kak/Bpk/Ibu *${v.picName}* (${v.groupName}),\n\n` +
       `Info dari *Divisi Konsumsi HBD*:\n` +
-      `Voucher konsumsi *${v.day}* (${v.mealType}) untuk kelompok Anda sudah siap diserahkan.\n` +
+      `Kupon Voucher Konsumsi *${v.day}* (${v.mealType}) untuk kelompok Anda sudah siap diambil.\n` +
+      `*(Catatan: H-2, H-1, & H+1 menggunakan skema voucher klaim makan ke merchant rekanan)*\n` +
       `- Alokasi: *${v.qty} Lembar Voucher / Pax*\n` +
-      `- Menu / Vendor: *${v.menuVendor}*\n` +
-      `- Estimasi Nilai: *Rp ${v.totalPrice.toLocaleString('id-ID')}*\n` +
-      `- Kode Voucher: ${v.voucherCode || 'Tersedia di meja panitia'}\n\n` +
-      `Silakan ambil dan tandatangani tanda terima di Pos Konsumsi HBD. Terima kasih!`
+      `- Rekanan / Nilai: *${v.menuVendor}*\n` +
+      `- Estimasi Total: *Rp ${v.totalPrice.toLocaleString('id-ID')}*\n` +
+      `- Kode Kupon: ${v.voucherCode || 'Tersedia di meja panitia'}\n\n` +
+      `Silakan ambil kupon fisik di Pos Konsumsi HBD. Terima kasih!`
     );
 
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
@@ -126,15 +127,15 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
         <div>
           <div className="flex items-center space-x-2">
             <span className="px-2 py-0.5 rounded bg-white/20 text-white text-xs font-semibold uppercase tracking-wide">
-              Sistem Voucher H-2 &amp; H-1
+              Skema Voucher H-2, H-1 &amp; H+1
             </span>
-            <span className="text-amber-100 text-xs">Penukaran &amp; Klaim Vendor</span>
+            <span className="text-amber-100 text-xs">Penukaran Merchant Mandiri (Tanpa Menu Pos)</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black mt-1 tracking-tight">
-            Monitoring Penyerahan &amp; Klaim Voucher
+            Monitoring Distribusi &amp; Penyerahan Voucher
           </h2>
           <p className="text-xs sm:text-sm text-amber-100 mt-1 max-w-2xl">
-            Sistem konsumsi masa persiapan (Loading &amp; Gladi Bersih) menggunakan mekanisme <strong>Tukar Voucher</strong> ke merchant rekanan (Ladas, Puti Minang, Bebek Belur, dll).
+            Untuk <strong>Hari H-2, H-1, dan H+1 tidak disediakan menu makanan catering tetap</strong> di pos konsumsi. Konsumsi disalurkan dalam bentuk <strong>Kupon Voucher Makan</strong> bernilai nominal yang dapat ditukarkan panitia/PIC langsung ke merchant/vendor rekanan.
           </p>
         </div>
 
@@ -173,7 +174,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
             <Ticket className="w-3.5 h-3.5" />
             <span>Hari H-2 (Loading Awal)</span>
             <span className={`px-1.5 py-0.2 rounded text-[10px] ${selectedDay === 'H-2' ? 'bg-amber-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
-              35 Pax (Rp 875k)
+              Voucher @ Rp 25k
             </span>
           </button>
 
@@ -188,7 +189,22 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
             <Ticket className="w-3.5 h-3.5" />
             <span>Hari H-1 (Loading &amp; Gladi)</span>
             <span className={`px-1.5 py-0.2 rounded text-[10px] ${selectedDay === 'H-1' ? 'bg-amber-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
-              255 Pax (Rp 7,09jt)
+              Voucher Siang &amp; Malam
+            </span>
+          </button>
+
+          <button
+            onClick={() => { setSelectedDay('H+1'); setSelectedMealType('all'); }}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              selectedDay === 'H+1'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Ticket className="w-3.5 h-3.5" />
+            <span>Hari H+1 (Bongkaran)</span>
+            <span className={`px-1.5 py-0.2 rounded text-[10px] ${selectedDay === 'H+1' ? 'bg-amber-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              Voucher Bongkaran
             </span>
           </button>
 
@@ -200,7 +216,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
-            Semua Voucher
+            Semua Voucher (H-2, H-1, H+1)
           </button>
         </div>
 
@@ -224,14 +240,16 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
       <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3.5 text-xs text-amber-900 flex items-start space-x-3">
         <Receipt className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-bold">Ketentuan Penukaran Voucher {selectedDay !== 'all' ? selectedDay : 'H-2 & H-1'}:</p>
+          <p className="font-bold">Ketentuan Skema Voucher Konsumsi ({selectedDay !== 'all' ? selectedDay : 'H-2, H-1 & H+1'}):</p>
           <p className="text-[11px] text-amber-800 leading-relaxed">
             {selectedDay === 'H-2' ? (
-              <span>• Nominal voucher klaim makan: <strong>Rp 25.000 / orang</strong> untuk 30 Panitia MD dan 5 orang OB di venue. Rekanan: Bebek Belur, Bu Ani, Ladas, Puti Minang.</span>
+              <span>• <strong>Tidak ada menu makanan catering pos konsumsi.</strong> Panitia &amp; OB menerima voucher makan senilai <strong>Rp 25.000 / orang</strong> untuk ditukarkan ke merchant rekanan (Bebek Belur, Bu Ani, Ladas, Puti Minang).</span>
             ) : selectedDay === 'H-1' ? (
-              <span>• Siang H-1: Nasi Ladas (Rp 29.500) untuk Panitia MD &amp; Buffer (85 pax), Puti Minang (Rp 22.000) untuk Team SNR (15 pax).<br />• Malam H-1: Nasi Padang Puti Minang (Rp 22.000) untuk seluruh 155 pax (MD, Community, Ronald, SNR, OB, Buffer).</span>
+              <span>• <strong>Tidak ada menu makanan catering pos konsumsi.</strong> Seluruh PIC menerima kupon voucher:<br />- Sesi Siang: Voucher Ladas (Rp 29.500) &amp; Puti Minang (Rp 22.000)<br />- Sesi Malam: Voucher Puti Minang (Rp 22.000) untuk all-panitia/vendor (155 pax).</span>
+            ) : selectedDay === 'H+1' ? (
+              <span>• <strong>Tidak ada menu makanan catering pos konsumsi.</strong> Tim bongkaran &amp; OB pasca-event menerima voucher makan @ <strong>Rp 25.000 / pax</strong> untuk penukaran mandiri ke merchant.</span>
             ) : (
-              <span>• Pastikan setiap PIC menandatangani bukti serah terima kupon voucher sebelum dibagikan ke anggota masing-masing.</span>
+              <span>• <strong>H-2, H-1, dan H+1 tidak menyediakan menu catering siap saji di pos.</strong> Penyaluran konsumsi dilakukan 100% menggunakan kupon voucher makan fisik/digital untuk ditukar ke merchant rekanan.</span>
             )}
           </p>
         </div>
@@ -422,7 +440,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                   {/* Middle voucher value */}
                   <div className="bg-slate-50 rounded-lg p-2.5 border border-slate-200/80 sm:min-w-[220px]">
                     <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                      Vendor &amp; Nilai Klaim:
+                      Skema Voucher &amp; Rekanan:
                     </div>
                     <div className="text-xs font-bold text-slate-800 mt-0.5">
                       {item.menuVendor}

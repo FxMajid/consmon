@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Sistem Distribusi Menu Hari H &amp; Manajemen Voucher H-2 / H-1
+                Sistem Distribusi Menu Hari H &amp; Skema Voucher H-2, H-1, H+1
               </p>
             </div>
           </div>
@@ -182,9 +182,9 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Ticket className="w-4 h-4" />
-            <span>Voucher H-2 &amp; H-1</span>
+            <span>Voucher H-2, H-1 &amp; H+1</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'voucher' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-800'}`}>
-              Voucher
+              Voucher Mandiri
             </span>
           </button>
 

@@ -876,6 +876,17 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
       {/* VIEW 3: MASTER ALOKASI PIC & JADWAL KEHADIRAN (EXISTING TABLE) */}
       {subTab === 'master_pic' && (
         <div className="space-y-4">
+          {/* Informative notice on voucher scheme */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start space-x-3 text-xs text-amber-900">
+            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Ketentuan Konsumsi H-2, H-1 &amp; H+1 vs Hari H:</span>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Pada hari <strong>H-2, H-1, dan H+1 tidak ada pembagian paket menu makanan</strong> di pos konsumsi karena seluruhnya menggunakan <strong>Skema Kupon Voucher Makan Mandiri</strong> ke merchant rekanan. Distribusi menu makanan catering terjadwal (Pagi, Siang, Snack, Malam) hanya berlangsung pada <strong>Hari H</strong>.
+              </p>
+            </div>
+          </div>
+
           {/* Filter Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
@@ -928,9 +939,18 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                     <th className="py-3 px-3">PIC Lapangan</th>
                     <th className="py-3 px-3">PIC Pengambil &amp; WA</th>
                     <th className="py-3 px-2 text-center">Qty</th>
-                    <th className="py-3 px-2 text-center">Siang H-2</th>
-                    <th className="py-3 px-2 text-center">Siang H-1</th>
-                    <th className="py-3 px-2 text-center">Malam H-1</th>
+                    <th className="py-3 px-2 text-center">
+                      <span>Siang H-2</span>
+                      <span className="block text-[9px] font-normal text-amber-600">Voucher</span>
+                    </th>
+                    <th className="py-3 px-2 text-center">
+                      <span>Siang H-1</span>
+                      <span className="block text-[9px] font-normal text-amber-600">Voucher</span>
+                    </th>
+                    <th className="py-3 px-2 text-center">
+                      <span>Malam H-1</span>
+                      <span className="block text-[9px] font-normal text-amber-600">Voucher</span>
+                    </th>
                     <th className="py-3 px-2 text-center">Pagi H</th>
                     <th className="py-3 px-2 text-center">Siang H</th>
                     <th className="py-3 px-2 text-center">Malam H</th>

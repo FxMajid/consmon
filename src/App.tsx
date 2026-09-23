@@ -612,7 +612,7 @@ export default function App() {
     }
   };
 
-  const handleBatchClaimDay = async (day: 'H-2' | 'H-1') => {
+  const handleBatchClaimDay = async (day: 'H-2' | 'H-1' | 'H+1') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const updated = vouchers.map((v) => {
       if (v.day !== day) return v;

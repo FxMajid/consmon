@@ -333,7 +333,7 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
       let unitPrice = v.unit_price || 0;
       let totalPrice = v.total_price || 0;
       if (totalPrice === 0) {
-        if (v.day === 'H-2') {
+        if (v.day === 'H-2' || v.day === 'H+1') {
           unitPrice = 25000;
           totalPrice = (v.qty || 0) * unitPrice;
         } else if (mealType === 'Makan Siang') {
@@ -350,7 +350,7 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
 
       return {
         id: v.id,
-        day: (v.day || 'H-1') as 'H-2' | 'H-1',
+        day: (v.day || 'H-1') as 'H-2' | 'H-1' | 'H+1',
         groupNo: v.group_no,
         groupName: v.group_name,
         picName: v.pic_name,

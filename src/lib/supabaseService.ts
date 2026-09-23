@@ -190,7 +190,8 @@ export async function updateHariHSlotInSupabase(
   status: 'pending' | 'completed',
   pickedAt?: string,
   receiver?: string,
-  note?: string
+  note?: string,
+  groupNo?: number
 ): Promise<{ success: boolean; error?: string }> {
   const client = getSupabase();
   if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
@@ -226,14 +227,16 @@ export async function updateHariHSlotInSupabase(
       updateData.malam_receiver = status === 'completed' ? (receiver || null) : null;
     }
 
-    if (note) {
-      updateData.notes = note;
+    if (note !== undefined) {
+      updateData.notes = note || null;
     }
 
-    let { error } = await client
+    // Try update by id
+    let { data: updatedRows, error } = await client
       .from('hari_h_distributions')
       .update(updateData)
-      .eq('id', groupId);
+      .eq('id', groupId)
+      .select('id');
 
     // If failed because column does not exist in schema cache, omit optional fields and retry
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
@@ -241,8 +244,23 @@ export async function updateHariHSlotInSupabase(
       const retry = await client
         .from('hari_h_distributions')
         .update(updateData)
-        .eq('id', groupId);
+        .eq('id', groupId)
+        .select('id');
       error = retry.error;
+      updatedRows = retry.data;
+    }
+
+    // If 0 rows updated by id and groupNo is provided, try update by 'no'
+    if (!error && (!updatedRows || updatedRows.length === 0) && groupNo !== undefined) {
+      console.log(`[Supabase] Row not found by id=${groupId}, trying update by no=${groupNo}`);
+      const byNo = await client
+        .from('hari_h_distributions')
+        .update(updateData)
+        .eq('no', groupNo)
+        .select('id');
+      if (byNo.error) {
+        error = byNo.error;
+      }
     }
 
     if (error) {
@@ -255,6 +273,41 @@ export async function updateHariHSlotInSupabase(
   } catch (err: any) {
     console.error('[Supabase] Exception updating Hari H slot:', err);
     return { success: false, error: err?.message || 'Gagal update ke database' };
+  }
+}
+
+export async function updateVoucherStatusInSupabase(
+  id: string,
+  status: 'pending' | 'claimed' | 'cancelled',
+  claimedAt?: string,
+  receiverName?: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabase();
+  if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+
+  try {
+    const updateData: Record<string, any> = {
+      status: status,
+      claimed_at: status === 'claimed' ? (claimedAt || null) : null,
+      receiver_name: status === 'claimed' ? (receiverName || null) : null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await client
+      .from('vouchers')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('[Supabase] Error updating voucher status:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[Supabase] Successfully updated voucher status (${status}) for: ${id}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error('[Supabase] Exception updating voucher status:', err);
+    return { success: false, error: err?.message || 'Gagal update voucher' };
   }
 }
 

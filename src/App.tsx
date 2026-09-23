@@ -26,6 +26,7 @@ import {
   deleteHariHGroupFromSupabase,
   fetchVouchersFromSupabase, 
   upsertVoucherToSupabase,
+  updateVoucherStatusInSupabase,
   bulkUpsertVouchersToSupabase,
   deleteVoucherFromSupabase
 } from './lib/supabaseService';
@@ -503,9 +504,9 @@ export default function App() {
 
   // Handlers for Hari H
   const handleToggleHariHStatus = async (groupId: string, slot: MealTimeSlot, currentStatus: string) => {
+    const group = hariHGroups.find((g) => g.id === groupId);
     if (currentStatus === 'completed') {
       // Revert to pending
-      let updatedGroup: HariHGroupDistribution | null = null;
       setHariHGroups((prev) => {
         const next = prev.map((g) => {
           if (g.id !== groupId) return g;
@@ -516,15 +517,14 @@ export default function App() {
           else if (slot === 'snack_siang') { updated.snackSiangStatus = 'pending'; updated.snackSiangPickedAt = undefined; updated.snackSiangReceiver = undefined; }
           else if (slot === 'minuman') { updated.minumanStatus = 'pending'; updated.minumanPickedAt = undefined; updated.minumanReceiver = undefined; }
           else if (slot === 'malam') { updated.malamStatus = 'pending'; updated.malamPickedAt = undefined; updated.malamReceiver = undefined; }
-          updatedGroup = updated;
           return updated;
         });
         localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
         return next;
       });
 
-      if (updatedGroup) {
-        const res = await updateHariHSlotInSupabase(groupId, slot, 'pending');
+      if (groupId) {
+        const res = await updateHariHSlotInSupabase(groupId, slot, 'pending', undefined, undefined, undefined, group?.no);
         if (!res.success && isSupabaseConfigured()) {
           alert(
             `Peringatan: Gagal membatalkan status di Supabase Cloud Database:\n\n${res.error || 'Terjadi kesalahan'}\n\n` +
@@ -534,7 +534,6 @@ export default function App() {
       }
     } else {
       // Open quick modal
-      const group = hariHGroups.find((g) => g.id === groupId);
       if (!group) return;
 
       let menu = '';
@@ -563,9 +562,9 @@ export default function App() {
 
   const handleConfirmModal = async (receiverName: string, note: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    let updatedGroup: HariHGroupDistribution | null = null;
     const targetGroupId = modalData.groupId;
     const targetSlot = modalData.slot;
+    const targetGroup = hariHGroups.find((g) => g.id === targetGroupId);
 
     setHariHGroups((prev) => {
       const next = prev.map((g) => {
@@ -582,7 +581,6 @@ export default function App() {
         if (note) {
           updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
         }
-        updatedGroup = updated;
         return updated;
       });
       localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
@@ -596,7 +594,8 @@ export default function App() {
         'completed',
         timeStr,
         receiverName,
-        note
+        note,
+        targetGroup?.no
       );
       if (!res.success && isSupabaseConfigured()) {
         alert(
@@ -635,22 +634,36 @@ export default function App() {
 
   // Handlers for Voucher
   const handleToggleVoucherStatus = async (id: string, currentStatus: string) => {
+    const isCurrentlyClaimed = currentStatus === 'claimed';
+    const newStatus = isCurrentlyClaimed ? 'pending' : 'claimed';
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    let updatedItem: VoucherDistributionItem | null = null;
-    setVouchers((prev) =>
-      prev.map((v) => {
+
+    setVouchers((prev) => {
+      const nextList = prev.map((v) => {
         if (v.id !== id) return v;
-        const next = {
+        return {
           ...v,
-          status: (currentStatus === 'claimed' ? 'pending' : 'claimed') as 'pending' | 'claimed',
-          claimedAt: currentStatus === 'claimed' ? undefined : timeStr,
+          status: newStatus as 'pending' | 'claimed',
+          claimedAt: newStatus === 'claimed' ? timeStr : undefined,
+          receiverName: newStatus === 'claimed' ? (v.receiverName || v.picName) : undefined,
         };
-        updatedItem = next;
-        return next;
-      })
-    );
-    if (updatedItem) {
-      await upsertVoucherToSupabase(updatedItem);
+      });
+      localStorage.setItem('hbd_vouchers', JSON.stringify(nextList));
+      return nextList;
+    });
+
+    if (id) {
+      const res = await updateVoucherStatusInSupabase(
+        id,
+        newStatus as 'pending' | 'claimed',
+        newStatus === 'claimed' ? timeStr : undefined,
+        newStatus === 'claimed' ? undefined : undefined
+      );
+      if (!res.success && isSupabaseConfigured()) {
+        alert(
+          `Gagal mengubah status voucher di database Supabase:\n\n${res.error || 'Terjadi kesalahan sistem'}`
+        );
+      }
     }
   };
 

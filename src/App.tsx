@@ -24,6 +24,7 @@ import {
   updateHariHSlotInSupabase,
   bulkUpsertHariHToSupabase,
   deleteHariHGroupFromSupabase,
+  syncHariHCategoriesInSupabase,
   fetchVouchersFromSupabase, 
   upsertVoucherToSupabase,
   updateVoucherStatusInSupabase,
@@ -55,7 +56,15 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed.map((g) => {
+            if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
+              return { ...g, category: 'Eksternal' as const };
+            }
+            if (g.no === 64 && g.category !== 'Buffer') {
+              return { ...g, category: 'Buffer' as const };
+            }
+            return g;
+          });
         }
       } catch (e) {
         console.error('Error parsing saved hari_h groups', e);
@@ -283,6 +292,9 @@ export default function App() {
     });
 
     fetchHariHFromSupabase().then(async (cloudHariH) => {
+      // Synchronize category in database in background if legacy rows lacked proper categories
+      syncHariHCategoriesInSupabase();
+
       if (cloudHariH && cloudHariH.length > 0) {
         // Clean up legacy obsolete combined rows if present in database
         const obsoleteIds = ['h-grp-1', 'h-grp-md-15', 'h-grp-4', 'h-grp-8'];
@@ -293,9 +305,19 @@ export default function App() {
           }
         }
 
-        const cleanCloud = cloudHariH.filter(
-          (g) => !obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal'
-        );
+        const cleanCloud = cloudHariH
+          .filter(
+            (g) => !obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal'
+          )
+          .map((g) => {
+            if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
+              return { ...g, category: 'Eksternal' as const };
+            }
+            if (g.no === 64 && g.category !== 'Buffer') {
+              return { ...g, category: 'Buffer' as const };
+            }
+            return g;
+          });
         cleanCloud.sort((a, b) => a.no - b.no);
 
         setHariHGroups(cleanCloud);

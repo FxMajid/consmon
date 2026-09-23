@@ -193,6 +193,11 @@ ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Internal';
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS total_amount INTEGER DEFAULT 0;
 
+-- Update kategori data distribusi Hari H (No 1-39 Internal, 40-63 Eksternal, 64 Buffer)
+UPDATE public.hari_h_distributions SET category = 'Eksternal' WHERE no >= 40 AND no < 64;
+UPDATE public.hari_h_distributions SET category = 'Buffer' WHERE no = 64;
+UPDATE public.hari_h_distributions SET category = 'Internal' WHERE no < 40;
+
 -- Berikan izin penuh (SELECT, INSERT, UPDATE, DELETE) untuk role anon dan authenticated
 GRANT ALL ON TABLE public.id_cards_konsumsi TO anon, authenticated;
 GRANT ALL ON TABLE public.hari_h_distributions TO anon, authenticated;

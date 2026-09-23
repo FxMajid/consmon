@@ -138,46 +138,60 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
 
     if (!data || data.length === 0) return [];
 
-    return data.map((r: any) => ({
-      id: r.id,
-      no: r.no,
-      groupName: r.group_name,
-      picName: r.pic_name,
-      picPhone: r.pic_phone || '',
-      category: (r.category || 'Internal') as 'Internal' | 'Eksternal' | 'Buffer',
-      pagiQty: r.pagi_qty || 0,
-      pagiMenu: r.pagi_menu || '',
-      pagiStatus: r.pagi_status || 'pending',
-      pagiPickedAt: r.pagi_picked_at || undefined,
-      pagiReceiver: r.pagi_receiver || undefined,
-      snackPagiQty: r.snack_pagi_qty || 0,
-      snackPagiMenu: r.snack_pagi_menu || '',
-      snackPagiStatus: r.snack_pagi_status || 'pending',
-      snackPagiPickedAt: r.snack_pagi_picked_at || undefined,
-      snackPagiReceiver: r.snack_pagi_receiver || undefined,
-      siangQty: r.siang_qty || 0,
-      siangMenu: r.siang_menu || '',
-      siangStatus: r.siang_status || 'pending',
-      siangPickedAt: r.siang_picked_at || undefined,
-      siangReceiver: r.siang_receiver || undefined,
-      snackSiangQty: r.snack_siang_qty || 0,
-      snackSiangMenu: r.snack_siang_menu || '',
-      snackSiangStatus: r.snack_siang_status || 'pending',
-      snackSiangPickedAt: r.snack_siang_picked_at || undefined,
-      snackSiangReceiver: r.snack_siang_receiver || undefined,
-      minumanQty: r.minuman_qty || 0,
-      minumanMenu: r.minuman_menu || '',
-      minumanStatus: r.minuman_status || 'pending',
-      minumanPickedAt: r.minuman_picked_at || undefined,
-      minumanReceiver: r.minuman_receiver || undefined,
-      malamQty: r.malam_qty || 0,
-      malamMenu: r.malam_menu || '',
-      malamStatus: r.malam_status || 'pending',
-      malamPickedAt: r.malam_picked_at || undefined,
-      malamReceiver: r.malam_receiver || undefined,
-      totalAmount: r.total_amount || 0,
-      notes: r.notes || undefined,
-    }));
+    return data.map((r: any) => {
+      // Correctly determine category: No 40 to 63 are Eksternal, 64 is Buffer, 1 to 39 are Internal
+      let cat: 'Internal' | 'Eksternal' | 'Buffer' = 'Internal';
+      if (r.category === 'Eksternal' || r.category === 'Buffer') {
+        cat = r.category;
+      } else if (r.no === 64 || r.group_name?.toLowerCase().includes('buffer') || r.group_name?.toLowerCase().includes('cadangan')) {
+        cat = 'Buffer';
+      } else if (r.no >= 40) {
+        cat = 'Eksternal';
+      } else if (r.category === 'Internal') {
+        cat = 'Internal';
+      }
+
+      return {
+        id: r.id,
+        no: r.no,
+        groupName: r.group_name,
+        picName: r.pic_name,
+        picPhone: r.pic_phone || '',
+        category: cat,
+        pagiQty: r.pagi_qty || 0,
+        pagiMenu: r.pagi_menu || '',
+        pagiStatus: r.pagi_status || 'pending',
+        pagiPickedAt: r.pagi_picked_at || undefined,
+        pagiReceiver: r.pagi_receiver || undefined,
+        snackPagiQty: r.snack_pagi_qty || 0,
+        snackPagiMenu: r.snack_pagi_menu || '',
+        snackPagiStatus: r.snack_pagi_status || 'pending',
+        snackPagiPickedAt: r.snack_pagi_picked_at || undefined,
+        snackPagiReceiver: r.snack_pagi_receiver || undefined,
+        siangQty: r.siang_qty || 0,
+        siangMenu: r.siang_menu || '',
+        siangStatus: r.siang_status || 'pending',
+        siangPickedAt: r.siang_picked_at || undefined,
+        siangReceiver: r.siang_receiver || undefined,
+        snackSiangQty: r.snack_siang_qty || 0,
+        snackSiangMenu: r.snack_siang_menu || '',
+        snackSiangStatus: r.snack_siang_status || 'pending',
+        snackSiangPickedAt: r.snack_siang_picked_at || undefined,
+        snackSiangReceiver: r.snack_siang_receiver || undefined,
+        minumanQty: r.minuman_qty || 0,
+        minumanMenu: r.minuman_menu || '',
+        minumanStatus: r.minuman_status || 'pending',
+        minumanPickedAt: r.minuman_picked_at || undefined,
+        minumanReceiver: r.minuman_receiver || undefined,
+        malamQty: r.malam_qty || 0,
+        malamMenu: r.malam_menu || '',
+        malamStatus: r.malam_status || 'pending',
+        malamPickedAt: r.malam_picked_at || undefined,
+        malamReceiver: r.malam_receiver || undefined,
+        totalAmount: r.total_amount || 0,
+        notes: r.notes || undefined,
+      };
+    });
   } catch (err) {
     console.error('[Supabase] Error during fetchHariHFromSupabase:', err);
     return null;
@@ -316,12 +330,14 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
   if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
 
   try {
+    const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
     const payload = {
       id: group.id,
       no: group.no,
       group_name: group.groupName,
       pic_name: group.picName,
       pic_phone: group.picPhone || null,
+      category: category,
       pagi_qty: group.pagiQty,
       pagi_menu: group.pagiMenu,
       pagi_status: group.pagiStatus,
@@ -461,44 +477,48 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
   if (!client || groups.length === 0) return false;
 
   try {
-    const payloads = groups.map((group) => ({
-      id: group.id,
-      no: group.no,
-      group_name: group.groupName,
-      pic_name: group.picName,
-      pic_phone: group.picPhone || null,
-      pagi_qty: group.pagiQty,
-      pagi_menu: group.pagiMenu,
-      pagi_status: group.pagiStatus,
-      pagi_picked_at: group.pagiPickedAt || null,
-      pagi_receiver: group.pagiReceiver || null,
-      snack_pagi_qty: group.snackPagiQty || 0,
-      snack_pagi_menu: group.snackPagiMenu || '',
-      snack_pagi_status: group.snackPagiStatus || 'pending',
-      snack_pagi_picked_at: group.snackPagiPickedAt || null,
-      snack_pagi_receiver: group.snackPagiReceiver || null,
-      siang_qty: group.siangQty,
-      siang_menu: group.siangMenu,
-      siang_status: group.siangStatus,
-      siang_picked_at: group.siangPickedAt || null,
-      siang_receiver: group.siangReceiver || null,
-      snack_siang_qty: group.snackSiangQty || 0,
-      snack_siang_menu: group.snackSiangMenu || '',
-      snack_siang_status: group.snackSiangStatus || 'pending',
-      snack_siang_picked_at: group.snackSiangPickedAt || null,
-      snack_siang_receiver: group.snackSiangReceiver || null,
-      minuman_qty: group.minumanQty || 0,
-      minuman_menu: group.minumanMenu || '',
-      minuman_status: group.minumanStatus || 'pending',
-      minuman_picked_at: group.minumanPickedAt || null,
-      minuman_receiver: group.minumanReceiver || null,
-      malam_qty: group.malamQty,
-      malam_menu: group.malamMenu,
-      malam_status: group.malamStatus,
-      malam_picked_at: group.malamPickedAt || null,
-      malam_receiver: group.malamReceiver || null,
-      updated_at: new Date().toISOString(),
-    }));
+    const payloads = groups.map((group) => {
+      const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
+      return {
+        id: group.id,
+        no: group.no,
+        group_name: group.groupName,
+        pic_name: group.picName,
+        pic_phone: group.picPhone || null,
+        category: category,
+        pagi_qty: group.pagiQty,
+        pagi_menu: group.pagiMenu,
+        pagi_status: group.pagiStatus,
+        pagi_picked_at: group.pagiPickedAt || null,
+        pagi_receiver: group.pagiReceiver || null,
+        snack_pagi_qty: group.snackPagiQty || 0,
+        snack_pagi_menu: group.snackPagiMenu || '',
+        snack_pagi_status: group.snackPagiStatus || 'pending',
+        snack_pagi_picked_at: group.snackPagiPickedAt || null,
+        snack_pagi_receiver: group.snackPagiReceiver || null,
+        siang_qty: group.siangQty,
+        siang_menu: group.siangMenu,
+        siang_status: group.siangStatus,
+        siang_picked_at: group.siangPickedAt || null,
+        siang_receiver: group.siangReceiver || null,
+        snack_siang_qty: group.snackSiangQty || 0,
+        snack_siang_menu: group.snackSiangMenu || '',
+        snack_siang_status: group.snackSiangStatus || 'pending',
+        snack_siang_picked_at: group.snackSiangPickedAt || null,
+        snack_siang_receiver: group.snackSiangReceiver || null,
+        minuman_qty: group.minumanQty || 0,
+        minuman_menu: group.minumanMenu || '',
+        minuman_status: group.minumanStatus || 'pending',
+        minuman_picked_at: group.minumanPickedAt || null,
+        minuman_receiver: group.minumanReceiver || null,
+        malam_qty: group.malamQty,
+        malam_menu: group.malamMenu,
+        malam_status: group.malamStatus,
+        malam_picked_at: group.malamPickedAt || null,
+        malam_receiver: group.malamReceiver || null,
+        updated_at: new Date().toISOString(),
+      };
+    });
 
     let { error } = await client.from('hari_h_distributions').upsert(payloads);
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
@@ -537,6 +557,35 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
   } catch (err) {
     console.error('[Supabase] Bulk upsert Hari H exception:', err);
     return false;
+  }
+}
+
+export async function syncHariHCategoriesInSupabase(): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+  try {
+    // 1. Update Eksternal (no 40 to 63)
+    await client
+      .from('hari_h_distributions')
+      .update({ category: 'Eksternal', updated_at: new Date().toISOString() })
+      .gte('no', 40)
+      .lt('no', 64);
+
+    // 2. Update Buffer (no 64)
+    await client
+      .from('hari_h_distributions')
+      .update({ category: 'Buffer', updated_at: new Date().toISOString() })
+      .eq('no', 64);
+
+    // 3. Update Internal (no 1 to 39)
+    await client
+      .from('hari_h_distributions')
+      .update({ category: 'Internal', updated_at: new Date().toISOString() })
+      .lt('no', 40);
+
+    console.log('[Supabase] Successfully synchronized categories in database (Internal / Eksternal / Buffer)');
+  } catch (err) {
+    console.warn('[Supabase] Exception during syncHariHCategoriesInSupabase:', err);
   }
 }
 

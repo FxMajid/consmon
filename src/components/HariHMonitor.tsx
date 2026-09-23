@@ -684,7 +684,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                               ? 'bg-blue-50 text-blue-700 border border-blue-200' 
                               : group.category === 'Buffer'
                               ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                              : 'bg-teal-50 text-teal-700 border border-teal-200'
                           }`}>
                             {group.category}
                           </span>
@@ -808,7 +808,13 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                     <div>
                       <div className="flex items-center space-x-2">
                         <h4 className="font-bold text-sm text-slate-900">{group.groupName}</h4>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          group.category === 'Internal' 
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                            : group.category === 'Buffer'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-teal-50 text-teal-700 border border-teal-200'
+                        }`}>
                           {group.category}
                         </span>
                       </div>

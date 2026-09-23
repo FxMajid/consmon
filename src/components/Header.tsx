@@ -16,8 +16,8 @@ import {
 import { isSupabaseConfigured } from '../lib/supabase';
 
 interface HeaderProps {
-  activeTab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget';
-  setActiveTab: (tab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget') => void;
+  activeTab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master';
+  setActiveTab: (tab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master') => void;
   stats: {
     totalPorsiHariH: number;
     diambilHariH: number;
@@ -228,6 +228,22 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <PieChart className="w-4 h-4" />
             <span>Rekap Biaya &amp; Budget</span>
+          </button>
+
+          <button
+            id="tab-master"
+            onClick={() => setActiveTab('master')}
+            className={`flex items-center space-x-2 px-3.5 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeTab === 'master'
+                ? 'bg-indigo-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            <span>Data Master (CRUD)</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'master' ? 'bg-indigo-800 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
+              CRUD Admin
+            </span>
           </button>
         </nav>
       </div>

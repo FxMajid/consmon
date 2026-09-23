@@ -14,11 +14,13 @@ import { PrintableIdCardsModal } from './components/PrintableIdCardsModal';
 import { StaticActivationQrModal } from './components/StaticActivationQrModal';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
 import { DataImportModal, ImportCategory } from './components/DataImportModal';
+import { MasterDataManager } from './components/MasterDataManager';
 import { isSupabaseConfigured, getSupabase } from './lib/supabase';
 import { 
   fetchIdCardsFromSupabase, 
   upsertIdCardToSupabase, 
   bulkUpsertIdCardsToSupabase,
+  deleteIdCardFromSupabase,
   fetchHariHFromSupabase, 
   upsertHariHToSupabase, 
   updateHariHSlotInSupabase,
@@ -36,18 +38,20 @@ import {
   HariHGroupDistribution, 
   VoucherDistributionItem, 
   MealTimeSlot,
-  IDCardKonsumsi
+  IDCardKonsumsi,
+  MenuDetail
 } from './types';
 import { 
   INITIAL_HARI_H_GROUPS, 
   INITIAL_VOUCHER_DATA, 
   INDIVIDUAL_ACCESS_CARDS,
-  BUDGET_SUMMARY
+  BUDGET_SUMMARY,
+  MENU_DEFINITIONS
 } from './data/consumptionData';
 import { INITIAL_ID_CARDS } from './data/idCardData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget'>('hari_h');
+  const [activeTab, setActiveTab] = useState<'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master'>('hari_h');
 
   // Persistence in localStorage
   const [hariHGroups, setHariHGroups] = useState<HariHGroupDistribution[]>(() => {
@@ -114,6 +118,21 @@ export default function App() {
       }
     }
     return INITIAL_ID_CARDS;
+  });
+
+  const [menus, setMenus] = useState<MenuDetail[]>(() => {
+    const saved = localStorage.getItem('hbd_master_menus');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Error parsing saved master menus', e);
+      }
+    }
+    return MENU_DEFINITIONS;
   });
 
   // Modal state for ID Card Activation
@@ -257,6 +276,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hbd_id_cards', JSON.stringify(idCards));
   }, [idCards]);
+
+  useEffect(() => {
+    localStorage.setItem('hbd_master_menus', JSON.stringify(menus));
+  }, [menus]);
 
   // Helper to safely merge cloud cards with local state
   const mergeCards = (localList: IDCardKonsumsi[], cloudList: IDCardKonsumsi[]): IDCardKonsumsi[] => {
@@ -1002,6 +1025,128 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  // Master Data CRUD Handlers
+  const handleSaveHariHGroup = async (group: HariHGroupDistribution, isNew: boolean): Promise<boolean> => {
+    let updatedList: HariHGroupDistribution[];
+    if (isNew) {
+      updatedList = [...hariHGroups, group].sort((a, b) => a.no - b.no);
+    } else {
+      updatedList = hariHGroups.map((g) => (g.id === group.id ? group : g)).sort((a, b) => a.no - b.no);
+    }
+    setHariHGroups(updatedList);
+    localStorage.setItem('hbd_hari_h_groups', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      const res = await upsertHariHToSupabase(group);
+      return res.success;
+    }
+    return true;
+  };
+
+  const handleDeleteHariHGroup = async (id: string, groupNo?: number): Promise<boolean> => {
+    const updatedList = hariHGroups.filter((g) => g.id !== id);
+    setHariHGroups(updatedList);
+    localStorage.setItem('hbd_hari_h_groups', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      return await deleteHariHGroupFromSupabase(id);
+    }
+    return true;
+  };
+
+  const handleSaveVoucher = async (voucher: VoucherDistributionItem, isNew: boolean): Promise<boolean> => {
+    let updatedList: VoucherDistributionItem[];
+    if (isNew) {
+      updatedList = [voucher, ...vouchers];
+    } else {
+      updatedList = vouchers.map((v) => (v.id === voucher.id ? voucher : v));
+    }
+    setVouchers(updatedList);
+    localStorage.setItem('hbd_vouchers', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      return await upsertVoucherToSupabase(voucher);
+    }
+    return true;
+  };
+
+  const handleDeleteVoucherItem = async (id: string, voucherCode?: string): Promise<boolean> => {
+    const updatedList = vouchers.filter((v) => v.id !== id);
+    setVouchers(updatedList);
+    localStorage.setItem('hbd_vouchers', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      const res = await deleteVoucherFromSupabase({ id, voucherCode });
+      return res.success;
+    }
+    return true;
+  };
+
+  const handleSaveIdCard = async (card: IDCardKonsumsi, isNew: boolean): Promise<boolean> => {
+    let updatedList: IDCardKonsumsi[];
+    if (isNew) {
+      updatedList = [...idCards, card].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+    } else {
+      updatedList = idCards.map((c) => (c.id === card.id ? card : c));
+    }
+    setIdCards(updatedList);
+    localStorage.setItem('hbd_id_cards', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      return await upsertIdCardToSupabase(card);
+    }
+    return true;
+  };
+
+  const handleDeleteIdCardItem = async (id: string): Promise<boolean> => {
+    const updatedList = idCards.filter((c) => c.id !== id);
+    setIdCards(updatedList);
+    localStorage.setItem('hbd_id_cards', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      return await deleteIdCardFromSupabase(id);
+    }
+    return true;
+  };
+
+  const handleSaveMenu = (menu: MenuDetail, isNew: boolean) => {
+    let updatedList: MenuDetail[];
+    if (isNew) {
+      updatedList = [...menus, menu];
+    } else {
+      updatedList = menus.map((m) => (m.id === menu.id ? menu : m));
+    }
+    setMenus(updatedList);
+    localStorage.setItem('hbd_master_menus', JSON.stringify(updatedList));
+  };
+
+  const handleDeleteMenu = (id: string) => {
+    const updatedList = menus.filter((m) => m.id !== id);
+    setMenus(updatedList);
+    localStorage.setItem('hbd_master_menus', JSON.stringify(updatedList));
+  };
+
+  const handleRefreshCloudData = async () => {
+    if (!isSupabaseConfigured()) return;
+    const [cloudHariH, cloudVouchers, cloudCards] = await Promise.all([
+      fetchHariHFromSupabase(),
+      fetchVouchersFromSupabase(),
+      fetchIdCardsFromSupabase(),
+    ]);
+    if (cloudHariH && cloudHariH.length > 0) {
+      setHariHGroups(cloudHariH);
+      localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cloudHariH));
+    }
+    if (cloudVouchers && cloudVouchers.length > 0) {
+      setVouchers(cloudVouchers);
+      localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
+    }
+    if (cloudCards && cloudCards.length > 0) {
+      setIdCards(cloudCards);
+      localStorage.setItem('hbd_id_cards', JSON.stringify(cloudCards));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-900 flex flex-col antialiased">
       {/* App Header & Navigation */}
@@ -1056,11 +1201,29 @@ export default function App() {
         )}
 
         {activeTab === 'menu' && (
-          <MenuCatalog />
+          <MenuCatalog menus={menus} />
         )}
 
         {activeTab === 'budget' && (
           <BudgetSummary />
+        )}
+
+        {activeTab === 'master' && (
+          <MasterDataManager
+            hariHGroups={hariHGroups}
+            onSaveHariHGroup={handleSaveHariHGroup}
+            onDeleteHariHGroup={handleDeleteHariHGroup}
+            vouchers={vouchers}
+            onSaveVoucher={handleSaveVoucher}
+            onDeleteVoucher={handleDeleteVoucherItem}
+            idCards={idCards}
+            onSaveIdCard={handleSaveIdCard}
+            onDeleteIdCard={handleDeleteIdCardItem}
+            menus={menus}
+            onSaveMenu={handleSaveMenu}
+            onDeleteMenu={handleDeleteMenu}
+            onRefreshCloudData={handleRefreshCloudData}
+          />
         )}
       </main>
 

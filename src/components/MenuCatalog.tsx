@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MENU_DEFINITIONS, INITIAL_HARI_H_GROUPS } from '../data/consumptionData';
+import { MenuDetail } from '../types';
 import { 
   Utensils, 
   Clock, 
@@ -13,11 +14,16 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-export const MenuCatalog: React.FC = () => {
+interface MenuCatalogProps {
+  menus?: MenuDetail[];
+}
+
+export const MenuCatalog: React.FC<MenuCatalogProps> = ({ menus: propMenus }) => {
+  const activeMenus = propMenus || MENU_DEFINITIONS;
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'makan' | 'snack' | 'minum'>('all');
   const [search, setSearch] = useState('');
 
-  const filteredMenus = MENU_DEFINITIONS.filter((m) => {
+  const filteredMenus = activeMenus.filter((m) => {
     if (selectedCategory !== 'all' && m.category !== selectedCategory) {
       return false;
     }

@@ -117,6 +117,23 @@ export async function bulkUpsertIdCardsToSupabase(cards: IDCardKonsumsi[]): Prom
   }
 }
 
+export async function deleteIdCardFromSupabase(id: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+  try {
+    const { error } = await client.from('id_cards_konsumsi').delete().eq('id', id);
+    if (error) {
+      console.warn('[Supabase] Error deleting ID Card from database:', error.message);
+      return false;
+    }
+    console.log('[Supabase] Successfully deleted ID Card:', id);
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Exception deleting ID Card:', err);
+    return false;
+  }
+}
+
 // ==========================================
 // 2. HARI H DISTRIBUTIONS SYNCHRONIZATION
 // ==========================================

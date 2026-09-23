@@ -318,23 +318,55 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
 
     if (!data || data.length === 0) return [];
 
-    return data.map((v: any) => ({
-      id: v.id,
-      day: (v.day || 'H-1') as 'H-2' | 'H-1',
-      groupNo: v.group_no,
-      groupName: v.group_name,
-      picName: v.pic_name,
-      picPhone: v.pic_phone || '',
-      mealType: 'Makan Siang' as const,
-      qty: v.qty,
-      menuVendor: v.menu_vendor,
-      unitPrice: 0,
-      totalPrice: 0,
-      status: (v.status || 'pending') as 'pending' | 'claimed' | 'cancelled',
-      claimedAt: v.claimed_at || undefined,
-      receiverName: v.receiver_name || undefined,
-      voucherCode: v.voucher_code || undefined,
-    }));
+    return data.map((v: any) => {
+      // Determine mealType properly
+      let mealType: 'Makan Siang' | 'Makan Malam' | 'Minuman' = 'Makan Siang';
+      if (v.meal_type === 'Makan Malam' || v.meal_type === 'Minuman' || v.meal_type === 'Makan Siang') {
+        mealType = v.meal_type;
+      } else if (v.id?.includes('malam') || (v.menu_vendor && v.menu_vendor.toLowerCase().includes('malam'))) {
+        mealType = 'Makan Malam';
+      } else if (v.id?.includes('minum') || (v.menu_vendor && v.menu_vendor.toLowerCase().includes('mineral'))) {
+        mealType = 'Minuman';
+      }
+
+      // Calculate proper unit price and total price if missing
+      let unitPrice = v.unit_price || 0;
+      let totalPrice = v.total_price || 0;
+      if (totalPrice === 0) {
+        if (v.day === 'H-2') {
+          unitPrice = 25000;
+          totalPrice = (v.qty || 0) * unitPrice;
+        } else if (mealType === 'Makan Siang') {
+          unitPrice = 29500;
+          totalPrice = (v.qty || 0) * unitPrice;
+        } else if (mealType === 'Makan Malam') {
+          unitPrice = 22000;
+          totalPrice = (v.qty || 0) * unitPrice;
+        } else if (mealType === 'Minuman') {
+          unitPrice = 850000;
+          totalPrice = 850000;
+        }
+      }
+
+      return {
+        id: v.id,
+        day: (v.day || 'H-1') as 'H-2' | 'H-1',
+        groupNo: v.group_no,
+        groupName: v.group_name,
+        picName: v.pic_name,
+        picPhone: v.pic_phone || '',
+        mealType: mealType,
+        qty: v.qty,
+        menuVendor: v.menu_vendor,
+        unitPrice: unitPrice,
+        totalPrice: totalPrice,
+        status: (v.status === 'claimed' ? 'claimed' : v.status === 'cancelled' ? 'cancelled' : 'pending') as 'pending' | 'claimed' | 'cancelled',
+        claimedAt: v.claimed_at || undefined,
+        receiverName: v.receiver_name || undefined,
+        voucherCode: v.voucher_code || undefined,
+        notes: v.notes || undefined,
+      };
+    });
   } catch (err) {
     console.error('[Supabase] Error during fetchVouchersFromSupabase:', err);
     return null;
@@ -355,10 +387,14 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
       pic_phone: voucher.picPhone || null,
       qty: voucher.qty,
       menu_vendor: voucher.menuVendor,
+      meal_type: voucher.mealType,
+      unit_price: voucher.unitPrice,
+      total_price: voucher.totalPrice,
       status: voucher.status,
       claimed_at: voucher.claimedAt || null,
       receiver_name: voucher.receiverName || null,
       voucher_code: voucher.voucherCode || null,
+      notes: voucher.notes || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -388,10 +424,14 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
       pic_phone: voucher.picPhone || null,
       qty: voucher.qty,
       menu_vendor: voucher.menuVendor,
+      meal_type: voucher.mealType,
+      unit_price: voucher.unitPrice,
+      total_price: voucher.totalPrice,
       status: voucher.status,
       claimed_at: voucher.claimedAt || null,
       receiver_name: voucher.receiverName || null,
       voucher_code: voucher.voucherCode || null,
+      notes: voucher.notes || null,
       updated_at: new Date().toISOString(),
     }));
 
@@ -403,6 +443,23 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
     return true;
   } catch (err) {
     console.error('[Supabase] Bulk upsert vouchers exception:', err);
+    return false;
+  }
+}
+
+export async function deleteVoucherFromSupabase(id: string): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+
+  try {
+    const { error } = await client.from('vouchers').delete().eq('id', id);
+    if (error) {
+      console.warn('[Supabase] Error deleting voucher:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Exception deleting voucher:', err);
     return false;
   }
 }

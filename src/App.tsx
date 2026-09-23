@@ -25,7 +25,8 @@ import {
   deleteHariHGroupFromSupabase,
   fetchVouchersFromSupabase, 
   upsertVoucherToSupabase,
-  bulkUpsertVouchersToSupabase
+  bulkUpsertVouchersToSupabase,
+  deleteVoucherFromSupabase
 } from './lib/supabaseService';
 
 import { 
@@ -305,7 +306,17 @@ export default function App() {
 
     fetchVouchersFromSupabase().then(async (cloudVouchers) => {
       if (cloudVouchers && cloudVouchers.length > 0) {
-        if (!cloudVouchers.some((v) => v.id === 'vouch-h2-1' && v.picName === '16 PIC')) {
+        // Clean up legacy or duplicate old ids if present
+        if (cloudVouchers.some((v) => v.id === 'vouch-h1-1' || v.id === 'vouch-h1-md-1')) {
+          await deleteVoucherFromSupabase('vouch-h1-1');
+          await deleteVoucherFromSupabase('vouch-h1-md-1');
+        }
+
+        const hasCorruptedState = cloudVouchers.some(
+          (v) => (v.id === 'vouch-h1-1-malam' && v.mealType !== 'Makan Malam') || v.totalPrice === 0
+        );
+
+        if (!cloudVouchers.some((v) => v.id === 'vouch-h2-1' && v.picName === '16 PIC') || hasCorruptedState) {
           await bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
           setVouchers(INITIAL_VOUCHER_DATA);
           localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
@@ -351,6 +362,21 @@ export default function App() {
       )
       .subscribe();
 
+    const vouchersChannel = client
+      .channel('realtime_vouchers')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vouchers' },
+        () => {
+          fetchVouchersFromSupabase().then((cloudVouchers) => {
+            if (cloudVouchers && cloudVouchers.length > 0) {
+              setVouchers(cloudVouchers);
+            }
+          });
+        }
+      )
+      .subscribe();
+
     // 3. Heartbeat polling every 8s as fallback
     const interval = setInterval(() => {
       fetchIdCardsFromSupabase().then((cloudCards) => {
@@ -363,6 +389,7 @@ export default function App() {
     return () => {
       client.removeChannel(idCardChannel);
       client.removeChannel(hariHChannel);
+      client.removeChannel(vouchersChannel);
       clearInterval(interval);
     };
   }, []);
@@ -565,32 +592,48 @@ export default function App() {
   };
 
   // Handlers for Voucher
-  const handleToggleVoucherStatus = (id: string, currentStatus: string) => {
+  const handleToggleVoucherStatus = async (id: string, currentStatus: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    let updatedItem: VoucherDistributionItem | null = null;
     setVouchers((prev) =>
       prev.map((v) => {
         if (v.id !== id) return v;
-        return {
+        const next = {
           ...v,
-          status: currentStatus === 'claimed' ? 'pending' : 'claimed',
+          status: (currentStatus === 'claimed' ? 'pending' : 'claimed') as 'pending' | 'claimed',
           claimedAt: currentStatus === 'claimed' ? undefined : timeStr,
         };
+        updatedItem = next;
+        return next;
       })
     );
+    if (updatedItem) {
+      await upsertVoucherToSupabase(updatedItem);
+    }
   };
 
-  const handleBatchClaimDay = (day: 'H-2' | 'H-1') => {
+  const handleBatchClaimDay = async (day: 'H-2' | 'H-1') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    setVouchers((prev) =>
-      prev.map((v) => {
-        if (v.day !== day) return v;
-        return {
-          ...v,
-          status: 'claimed',
-          claimedAt: timeStr,
-        };
-      })
-    );
+    const updated = vouchers.map((v) => {
+      if (v.day !== day) return v;
+      return {
+        ...v,
+        status: 'claimed' as const,
+        claimedAt: timeStr,
+      };
+    });
+    setVouchers(updated);
+    localStorage.setItem('hbd_vouchers', JSON.stringify(updated));
+    await bulkUpsertVouchersToSupabase(updated.filter((v) => v.day === day));
+  };
+
+  const handleDeleteVoucher = async (id: string) => {
+    setVouchers((prev) => {
+      const updated = prev.filter((v) => v.id !== id);
+      localStorage.setItem('hbd_vouchers', JSON.stringify(updated));
+      return updated;
+    });
+    await deleteVoucherFromSupabase(id);
   };
 
   // Scanner Pickup Handlers
@@ -861,6 +904,7 @@ export default function App() {
             onBatchClaimDay={handleBatchClaimDay}
             onOpenScanner={() => setIsScannerOpen(true)}
             onOpenImport={handleOpenImport}
+            onDeleteVoucher={handleDeleteVoucher}
             onOpenBarcodeCard={(data) => setBarcodeCardData(data)}
           />
         )}

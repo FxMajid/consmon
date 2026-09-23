@@ -13,7 +13,8 @@ import {
   CheckCheck,
   Scan,
   QrCode,
-  Upload
+  Upload,
+  Trash2
 } from 'lucide-react';
 import { getBarcodeForVoucher } from '../utils/barcodeUtils';
 
@@ -23,6 +24,7 @@ interface VoucherMonitorProps {
   onBatchClaimDay: (day: 'H-2' | 'H-1') => void;
   onOpenScanner: () => void;
   onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
+  onDeleteVoucher?: (id: string) => void;
   onOpenBarcodeCard: (data: {
     groupName: string;
     picName: string;
@@ -42,15 +44,20 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
   onBatchClaimDay,
   onOpenScanner,
   onOpenImport,
+  onDeleteVoucher,
   onOpenBarcodeCard
 }) => {
   const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'all'>('H-1');
+  const [selectedMealType, setSelectedMealType] = useState<'all' | 'Makan Siang' | 'Makan Malam' | 'Minuman'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'claimed'>('all');
 
   const filteredVouchers = useMemo(() => {
     return vouchers.filter((v) => {
       if (selectedDay !== 'all' && v.day !== selectedDay) {
+        return false;
+      }
+      if (selectedMealType !== 'all' && v.mealType !== selectedMealType) {
         return false;
       }
       if (statusFilter !== 'all' && v.status !== statusFilter) {
@@ -65,7 +72,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
 
       return matchesSearch;
     });
-  }, [vouchers, selectedDay, statusFilter, searchQuery]);
+  }, [vouchers, selectedDay, selectedMealType, statusFilter, searchQuery]);
 
   // Summary statistics for vouchers
   const stats = useMemo(() => {
@@ -154,9 +161,9 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
 
       {/* Day Selector Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-wrap gap-y-2">
           <button
-            onClick={() => setSelectedDay('H-2')}
+            onClick={() => { setSelectedDay('H-2'); setSelectedMealType('all'); }}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               selectedDay === 'H-2'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -171,7 +178,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
           </button>
 
           <button
-            onClick={() => setSelectedDay('H-1')}
+            onClick={() => { setSelectedDay('H-1'); setSelectedMealType('all'); }}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               selectedDay === 'H-1'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -186,7 +193,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
           </button>
 
           <button
-            onClick={() => setSelectedDay('all')}
+            onClick={() => { setSelectedDay('all'); setSelectedMealType('all'); }}
             className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
               selectedDay === 'all'
                 ? 'bg-slate-800 text-white'
@@ -244,6 +251,36 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 text-xs flex-wrap gap-y-2">
+          {/* Meal type quick filter */}
+          {selectedDay === 'H-1' && (
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              <button
+                onClick={() => setSelectedMealType('all')}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  selectedMealType === 'all' ? 'bg-white shadow-2xs font-bold text-slate-900' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Semua Menu
+              </button>
+              <button
+                onClick={() => setSelectedMealType('Makan Siang')}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  selectedMealType === 'Makan Siang' ? 'bg-amber-600 font-bold text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Makan Siang
+              </button>
+              <button
+                onClick={() => setSelectedMealType('Makan Malam')}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  selectedMealType === 'Makan Malam' ? 'bg-purple-600 font-bold text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Makan Malam
+              </button>
+            </div>
+          )}
+
           {onOpenImport && (
             <button
               onClick={() => onOpenImport('vouchers')}
@@ -251,7 +288,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
               title="Import Data Voucher (CSV/Excel) ke Database Supabase"
             >
               <Upload className="w-3.5 h-3.5 text-amber-600" />
-              <span>Import Data Voucher</span>
+              <span>Import Voucher</span>
             </button>
           )}
 
@@ -279,7 +316,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
               statusFilter === 'pending' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Belum Diserahkan
+            Belum
           </button>
           <button
             onClick={() => setStatusFilter('claimed')}
@@ -287,7 +324,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
               statusFilter === 'claimed' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
-            Sudah Diserahkan
+            Sudah
           </button>
         </div>
       </div>
@@ -302,6 +339,8 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
         ) : (
           filteredVouchers.map((item) => {
             const isClaimed = item.status === 'claimed';
+            const isMalam = item.mealType === 'Makan Malam';
+            const isMinum = item.mealType === 'Minuman';
 
             return (
               <div
@@ -316,7 +355,13 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                   {/* Left info */}
                   <div className="flex items-start space-x-3">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isClaimed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800'
+                      isClaimed 
+                        ? 'bg-emerald-600 text-white' 
+                        : isMalam 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : isMinum 
+                        ? 'bg-cyan-100 text-cyan-800' 
+                        : 'bg-amber-100 text-amber-800'
                     }`}>
                       <Ticket className="w-5 h-5" />
                     </div>
@@ -326,7 +371,13 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white">
                           {item.day}
                         </span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          isMalam
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : isMinum
+                            ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                            : 'bg-amber-100 text-amber-800 border border-amber-200'
+                        }`}>
                           {item.mealType}
                         </span>
                         <h4 className="font-bold text-sm text-slate-900">
@@ -354,14 +405,14 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                           </span>
                         )}
                         {item.voucherCode && (
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                          <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 font-bold">
                             {item.voucherCode}
                           </span>
                         )}
                       </div>
 
                       {item.notes && (
-                        <div className="text-[11px] text-slate-400 mt-1 italic">
+                        <div className="text-[11px] text-slate-500 mt-1 italic">
                           {item.notes}
                         </div>
                       )}
@@ -435,8 +486,23 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                       }`}
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>{isClaimed ? 'Batal Serah' : 'Tandai Diserahkan'}</span>
+                      <span>{isClaimed ? 'Batal' : 'Diserahkan'}</span>
                     </button>
+
+                    {/* Delete button */}
+                    {onDeleteVoucher && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Hapus voucher ${item.groupName} (${item.day} - ${item.mealType}) dari sistem & database?`)) {
+                            onDeleteVoucher(item.id);
+                          }
+                        }}
+                        title="Hapus voucher ini"
+                        className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

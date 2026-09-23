@@ -1947,13 +1947,13 @@ export const INITIAL_HARI_H_GROUPS: HariHGroupDistribution[] = [
 ];
 
 export const INITIAL_VOUCHER_DATA: VoucherDistributionItem[] = [
-  // H-2
+  // H-2 (Loading Awal)
   {
     id: 'vouch-h2-1',
     day: 'H-2',
     groupNo: 1,
-    groupName: 'Panitia MD (16 PIC)',
-    picName: 'Ahmad Farhan / Fadlillah / Gita',
+    groupName: 'Panitia MD',
+    picName: '16 PIC',
     picPhone: '8996423769',
     mealType: 'Makan Siang',
     qty: 30,
@@ -1962,14 +1962,14 @@ export const INITIAL_VOUCHER_DATA: VoucherDistributionItem[] = [
     totalPrice: 750000,
     status: 'pending',
     voucherCode: 'VOUCH-H2-MD-01 s/d 30',
-    notes: 'Voucher makan siang loading venue H-2',
+    notes: '30 Pax Voucher Klaim Makan @ Rp 25.000 untuk Panitia MD (16 PIC)',
   },
   {
     id: 'vouch-h2-11',
     day: 'H-2',
     groupNo: 11,
     groupName: 'Office Boy (OB)',
-    picName: 'Panggih / Amar',
+    picName: 'Panggih',
     picPhone: '83850780503',
     mealType: 'Makan Siang',
     qty: 5,
@@ -1978,7 +1978,7 @@ export const INITIAL_VOUCHER_DATA: VoucherDistributionItem[] = [
     totalPrice: 125000,
     status: 'pending',
     voucherCode: 'VOUCH-H2-OB-01 s/d 05',
-    notes: '5 Orang OB bertugas pembersihan lokasi H-2',
+    notes: '5 Pax Voucher Klaim Makan @ Rp 25.000 untuk 5 Orang OB pembersihan venue',
   },
   // H-1 Makan Siang
   {

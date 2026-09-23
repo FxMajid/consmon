@@ -24,7 +24,8 @@ import {
   bulkUpsertHariHToSupabase,
   deleteHariHGroupFromSupabase,
   fetchVouchersFromSupabase, 
-  upsertVoucherToSupabase 
+  upsertVoucherToSupabase,
+  bulkUpsertVouchersToSupabase
 } from './lib/supabaseService';
 
 import { 
@@ -71,7 +72,16 @@ export default function App() {
     const saved = localStorage.getItem('hbd_vouchers');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (
+          Array.isArray(parsed) &&
+          (!parsed.some((v: any) => v.id === 'vouch-h2-1' && v.picName === '16 PIC') ||
+            parsed.length < 8)
+        ) {
+          localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
+          return INITIAL_VOUCHER_DATA;
+        }
+        return parsed;
       } catch (e) {
         console.error('Error parsing saved vouchers', e);
       }
@@ -293,9 +303,17 @@ export default function App() {
       }
     });
 
-    fetchVouchersFromSupabase().then((cloudVouchers) => {
+    fetchVouchersFromSupabase().then(async (cloudVouchers) => {
       if (cloudVouchers && cloudVouchers.length > 0) {
-        setVouchers(cloudVouchers);
+        if (!cloudVouchers.some((v) => v.id === 'vouch-h2-1' && v.picName === '16 PIC')) {
+          await bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
+          setVouchers(INITIAL_VOUCHER_DATA);
+          localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
+        } else {
+          setVouchers(cloudVouchers);
+        }
+      } else {
+        bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
       }
     });
 

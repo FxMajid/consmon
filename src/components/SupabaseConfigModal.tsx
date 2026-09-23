@@ -189,6 +189,9 @@ ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_menu TE
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_status TEXT DEFAULT 'pending';
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_picked_at TEXT;
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_receiver TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Internal';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS total_amount INTEGER DEFAULT 0;
 
 -- Berikan izin penuh (SELECT, INSERT, UPDATE, DELETE) untuk role anon dan authenticated
 GRANT ALL ON TABLE public.id_cards_konsumsi TO anon, authenticated;

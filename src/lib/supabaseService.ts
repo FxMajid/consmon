@@ -1,5 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from './supabase';
-import { IDCardKonsumsi, HariHGroupDistribution, VoucherDistributionItem } from '../types';
+import { IDCardKonsumsi, HariHGroupDistribution, VoucherDistributionItem, MealTimeSlot } from '../types';
 
 // ==========================================
 // 1. ID CARD KONSUMSI SYNCHRONIZATION
@@ -184,9 +184,83 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
   }
 }
 
-export async function upsertHariHToSupabase(group: HariHGroupDistribution): Promise<boolean> {
+export async function updateHariHSlotInSupabase(
+  groupId: string,
+  slot: MealTimeSlot,
+  status: 'pending' | 'completed',
+  pickedAt?: string,
+  receiver?: string,
+  note?: string
+): Promise<{ success: boolean; error?: string }> {
   const client = getSupabase();
-  if (!client) return false;
+  if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+
+  try {
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (slot === 'pagi') {
+      updateData.pagi_status = status;
+      updateData.pagi_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.pagi_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'snack_pagi') {
+      updateData.snack_pagi_status = status;
+      updateData.snack_pagi_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.snack_pagi_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'siang') {
+      updateData.siang_status = status;
+      updateData.siang_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.siang_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'snack_siang') {
+      updateData.snack_siang_status = status;
+      updateData.snack_siang_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.snack_siang_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'minuman') {
+      updateData.minuman_status = status;
+      updateData.minuman_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.minuman_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'malam') {
+      updateData.malam_status = status;
+      updateData.malam_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.malam_receiver = status === 'completed' ? (receiver || null) : null;
+    }
+
+    if (note) {
+      updateData.notes = note;
+    }
+
+    let { error } = await client
+      .from('hari_h_distributions')
+      .update(updateData)
+      .eq('id', groupId);
+
+    // If failed because column does not exist in schema cache, omit optional fields and retry
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      delete updateData.notes;
+      const retry = await client
+        .from('hari_h_distributions')
+        .update(updateData)
+        .eq('id', groupId);
+      error = retry.error;
+    }
+
+    if (error) {
+      console.error('[Supabase] Error updating Hari H slot:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[Supabase] Successfully updated Hari H slot (${slot} -> ${status}) for group: ${groupId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error('[Supabase] Exception updating Hari H slot:', err);
+    return { success: false, error: err?.message || 'Gagal update ke database' };
+  }
+}
+
+export async function upsertHariHToSupabase(group: HariHGroupDistribution): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabase();
+  if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
 
   try {
     const payload = {
@@ -225,12 +299,15 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       malam_status: group.malamStatus,
       malam_picked_at: group.malamPickedAt || null,
       malam_receiver: group.malamReceiver || null,
-      total_amount: group.totalAmount || 0,
-      notes: group.notes || null,
       updated_at: new Date().toISOString(),
     };
 
-    let { error } = await client.from('hari_h_distributions').upsert(payload);
+    // First try UPDATE to avoid RLS INSERT restrictions if row exists
+    let { error } = await client
+      .from('hari_h_distributions')
+      .update(payload)
+      .eq('id', group.id);
+
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
       const basePayload = {
         id: group.id,
@@ -255,22 +332,58 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
         malam_receiver: group.malamReceiver || null,
         updated_at: new Date().toISOString(),
       };
-      const retry = await client.from('hari_h_distributions').upsert(basePayload);
-      if (!retry.error) {
-        console.log('[Supabase] Successfully upserted Hari H group (base schema):', group.id, group.groupName);
-        return true;
-      }
-      error = retry.error;
+      const retryUpdate = await client
+        .from('hari_h_distributions')
+        .update(basePayload)
+        .eq('id', group.id);
+      error = retryUpdate.error;
     }
-    if (error) {
-      console.warn('[Supabase] Error upserting Hari H group:', error.message);
-      return false;
+
+    // If update succeeded, return true
+    if (!error) {
+      console.log('[Supabase] Successfully updated Hari H group:', group.id, group.groupName);
+      return { success: true };
     }
+
+    // If update failed, try upsert
+    let upsertRes = await client.from('hari_h_distributions').upsert(payload);
+    if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache'))) {
+      const basePayload = {
+        id: group.id,
+        no: group.no,
+        group_name: group.groupName,
+        pic_name: group.picName,
+        pic_phone: group.picPhone || null,
+        pagi_qty: group.pagiQty,
+        pagi_menu: group.pagiMenu,
+        pagi_status: group.pagiStatus,
+        pagi_picked_at: group.pagiPickedAt || null,
+        pagi_receiver: group.pagiReceiver || null,
+        siang_qty: group.siangQty,
+        siang_menu: group.siangMenu,
+        siang_status: group.siangStatus,
+        siang_picked_at: group.siangPickedAt || null,
+        siang_receiver: group.siangReceiver || null,
+        malam_qty: group.malamQty,
+        malam_menu: group.malamMenu,
+        malam_status: group.malamStatus,
+        malam_picked_at: group.malamPickedAt || null,
+        malam_receiver: group.malamReceiver || null,
+        updated_at: new Date().toISOString(),
+      };
+      upsertRes = await client.from('hari_h_distributions').upsert(basePayload);
+    }
+
+    if (upsertRes.error) {
+      console.warn('[Supabase] Error upserting Hari H group:', upsertRes.error.message);
+      return { success: false, error: upsertRes.error.message };
+    }
+
     console.log('[Supabase] Successfully upserted Hari H group:', group.id, group.groupName);
-    return true;
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
     console.error('[Supabase] Exception upserting Hari H group:', err);
-    return false;
+    return { success: false, error: err?.message || 'Gagal update data' };
   }
 }
 

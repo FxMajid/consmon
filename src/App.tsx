@@ -21,6 +21,7 @@ import {
   bulkUpsertIdCardsToSupabase,
   fetchHariHFromSupabase, 
   upsertHariHToSupabase, 
+  updateHariHSlotInSupabase,
   bulkUpsertHariHToSupabase,
   deleteHariHGroupFromSupabase,
   fetchVouchersFromSupabase, 
@@ -523,7 +524,13 @@ export default function App() {
       });
 
       if (updatedGroup) {
-        await upsertHariHToSupabase(updatedGroup);
+        const res = await updateHariHSlotInSupabase(groupId, slot, 'pending');
+        if (!res.success && isSupabaseConfigured()) {
+          alert(
+            `Peringatan: Gagal membatalkan status di Supabase Cloud Database:\n\n${res.error || 'Terjadi kesalahan'}\n\n` +
+            `Catatan: Pastikan policy Row Level Security (RLS) di tabel 'hari_h_distributions' Supabase Anda mengizinkan operasi UPDATE.`
+          );
+        }
       }
     } else {
       // Open quick modal
@@ -557,18 +564,20 @@ export default function App() {
   const handleConfirmModal = async (receiverName: string, note: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     let updatedGroup: HariHGroupDistribution | null = null;
+    const targetGroupId = modalData.groupId;
+    const targetSlot = modalData.slot;
+
     setHariHGroups((prev) => {
       const next = prev.map((g) => {
-        if (g.id !== modalData.groupId) return g;
+        if (g.id !== targetGroupId) return g;
         const updated = { ...g };
-        const slot = modalData.slot;
 
-        if (slot === 'pagi') { updated.pagiStatus = 'completed'; updated.pagiPickedAt = timeStr; updated.pagiReceiver = receiverName; }
-        else if (slot === 'snack_pagi') { updated.snackPagiStatus = 'completed'; updated.snackPagiPickedAt = timeStr; updated.snackPagiReceiver = receiverName; }
-        else if (slot === 'siang') { updated.siangStatus = 'completed'; updated.siangPickedAt = timeStr; updated.siangReceiver = receiverName; }
-        else if (slot === 'snack_siang') { updated.snackSiangStatus = 'completed'; updated.snackSiangPickedAt = timeStr; updated.snackSiangReceiver = receiverName; }
-        else if (slot === 'minuman') { updated.minumanStatus = 'completed'; updated.minumanPickedAt = timeStr; updated.minumanReceiver = receiverName; }
-        else if (slot === 'malam') { updated.malamStatus = 'completed'; updated.malamPickedAt = timeStr; updated.malamReceiver = receiverName; }
+        if (targetSlot === 'pagi') { updated.pagiStatus = 'completed'; updated.pagiPickedAt = timeStr; updated.pagiReceiver = receiverName; }
+        else if (targetSlot === 'snack_pagi') { updated.snackPagiStatus = 'completed'; updated.snackPagiPickedAt = timeStr; updated.snackPagiReceiver = receiverName; }
+        else if (targetSlot === 'siang') { updated.siangStatus = 'completed'; updated.siangPickedAt = timeStr; updated.siangReceiver = receiverName; }
+        else if (targetSlot === 'snack_siang') { updated.snackSiangStatus = 'completed'; updated.snackSiangPickedAt = timeStr; updated.snackSiangReceiver = receiverName; }
+        else if (targetSlot === 'minuman') { updated.minumanStatus = 'completed'; updated.minumanPickedAt = timeStr; updated.minumanReceiver = receiverName; }
+        else if (targetSlot === 'malam') { updated.malamStatus = 'completed'; updated.malamPickedAt = timeStr; updated.malamReceiver = receiverName; }
 
         if (note) {
           updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
@@ -580,8 +589,23 @@ export default function App() {
       return next;
     });
 
-    if (updatedGroup) {
-      await upsertHariHToSupabase(updatedGroup);
+    if (targetGroupId) {
+      const res = await updateHariHSlotInSupabase(
+        targetGroupId,
+        targetSlot,
+        'completed',
+        timeStr,
+        receiverName,
+        note
+      );
+      if (!res.success && isSupabaseConfigured()) {
+        alert(
+          `Gagal menyimpan status pengambilan ke database Supabase:\n\n${res.error || 'Terjadi kesalahan sistem'}\n\n` +
+          `Penyebab Umum:\n` +
+          `1. Tabel 'hari_h_distributions' di Supabase belum memiliki izin UPDATE untuk role anon.\n` +
+          `2. Buka menu 'Konfigurasi Database' (tombol Database di kanan atas) dan jalankan SQL yang tersedia di SQL Editor Supabase Anda.`
+        );
+      }
     }
   };
 
@@ -723,8 +747,21 @@ export default function App() {
       return next;
     });
 
-    if (updatedGroup) {
-      await upsertHariHToSupabase(updatedGroup);
+    if (groupId) {
+      const res = await updateHariHSlotInSupabase(
+        groupId,
+        slot,
+        'completed',
+        timeStr,
+        receiverName,
+        note
+      );
+      if (!res.success && isSupabaseConfigured()) {
+        alert(
+          `Gagal menyimpan status scanner ke Supabase:\n\n${res.error || 'Terjadi kesalahan sistem'}\n\n` +
+          `Pastikan policy RLS di tabel 'hari_h_distributions' mengizinkan operasi UPDATE.`
+        );
+      }
     }
   };
 

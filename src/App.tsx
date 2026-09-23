@@ -146,42 +146,54 @@ export default function App() {
     setIsImportModalOpen(true);
   };
 
-  const handleImportIdCards = (newCards: IDCardKonsumsi[], mode: 'replace' | 'merge') => {
+  const handleImportIdCards = async (newCards: IDCardKonsumsi[], mode: 'replace' | 'merge') => {
+    let finalCards: IDCardKonsumsi[] = [];
     if (mode === 'replace') {
-      setIdCards(newCards);
+      finalCards = newCards;
     } else {
-      setIdCards((prev) => {
-        const map = new Map<string, IDCardKonsumsi>();
-        prev.forEach((c) => map.set(c.id, c));
-        newCards.forEach((c) => map.set(c.id, c));
-        return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
-      });
+      const map = new Map<string, IDCardKonsumsi>();
+      idCards.forEach((c) => map.set(c.id, c));
+      newCards.forEach((c) => map.set(c.id, c));
+      finalCards = Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+    }
+    setIdCards(finalCards);
+    localStorage.setItem('hbd_id_cards', JSON.stringify(finalCards));
+    if (isSupabaseConfigured()) {
+      await bulkUpsertIdCardsToSupabase(finalCards);
     }
   };
 
-  const handleImportHariH = (newGroups: HariHGroupDistribution[], mode: 'replace' | 'merge') => {
+  const handleImportHariH = async (newGroups: HariHGroupDistribution[], mode: 'replace' | 'merge') => {
+    let finalGroups: HariHGroupDistribution[] = [];
     if (mode === 'replace') {
-      setHariHGroups(newGroups);
+      finalGroups = newGroups;
     } else {
-      setHariHGroups((prev) => {
-        const map = new Map<string, HariHGroupDistribution>();
-        prev.forEach((g) => map.set(g.id || String(g.no), g));
-        newGroups.forEach((g) => map.set(g.id || String(g.no), g));
-        return Array.from(map.values()).sort((a, b) => a.no - b.no);
-      });
+      const map = new Map<string, HariHGroupDistribution>();
+      hariHGroups.forEach((g) => map.set(g.id || String(g.no), g));
+      newGroups.forEach((g) => map.set(g.id || String(g.no), g));
+      finalGroups = Array.from(map.values()).sort((a, b) => a.no - b.no);
+    }
+    setHariHGroups(finalGroups);
+    localStorage.setItem('hbd_hari_h_groups', JSON.stringify(finalGroups));
+    if (isSupabaseConfigured()) {
+      await bulkUpsertHariHToSupabase(finalGroups);
     }
   };
 
-  const handleImportVouchers = (newVouchers: VoucherDistributionItem[], mode: 'replace' | 'merge') => {
+  const handleImportVouchers = async (newVouchers: VoucherDistributionItem[], mode: 'replace' | 'merge') => {
+    let finalVouchers: VoucherDistributionItem[] = [];
     if (mode === 'replace') {
-      setVouchers(newVouchers);
+      finalVouchers = newVouchers;
     } else {
-      setVouchers((prev) => {
-        const map = new Map<string, VoucherDistributionItem>();
-        prev.forEach((v) => map.set(v.id, v));
-        newVouchers.forEach((v) => map.set(v.id, v));
-        return Array.from(map.values());
-      });
+      const map = new Map<string, VoucherDistributionItem>();
+      vouchers.forEach((v) => map.set(v.id, v));
+      newVouchers.forEach((v) => map.set(v.id, v));
+      finalVouchers = Array.from(map.values());
+    }
+    setVouchers(finalVouchers);
+    localStorage.setItem('hbd_vouchers', JSON.stringify(finalVouchers));
+    if (isSupabaseConfigured()) {
+      await bulkUpsertVouchersToSupabase(finalVouchers);
     }
   };
 
@@ -270,24 +282,26 @@ export default function App() {
 
     fetchHariHFromSupabase().then(async (cloudHariH) => {
       if (cloudHariH && cloudHariH.length > 0) {
-        if (
-          cloudHariH.some((g) => g.id === 'h-grp-1' || g.id === 'h-grp-md-15' || g.id === 'h-grp-4' || g.id === 'h-grp-8' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
-          !cloudHariH.some((g) => g.id === 'h-grp-25') ||
-          cloudHariH.length < 60
-        ) {
-          // Obsolete combined Panitia MD row or old external schema found in Supabase - auto-migrate to detailed groups
-          await deleteHariHGroupFromSupabase('h-grp-1');
-          await deleteHariHGroupFromSupabase('h-grp-md-15');
-          await deleteHariHGroupFromSupabase('h-grp-4');
-          await deleteHariHGroupFromSupabase('h-grp-8');
-          await bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
-          setHariHGroups(INITIAL_HARI_H_GROUPS);
-          localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
-        } else {
-          setHariHGroups(cloudHariH);
+        // Clean up legacy obsolete combined rows if present in database
+        const obsoleteIds = ['h-grp-1', 'h-grp-md-15', 'h-grp-4', 'h-grp-8'];
+        const hasObsolete = cloudHariH.some((g) => obsoleteIds.includes(g.id) || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal');
+        if (hasObsolete) {
+          for (const obsId of obsoleteIds) {
+            await deleteHariHGroupFromSupabase(obsId);
+          }
         }
-      } else {
-        bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
+
+        const cleanCloud = cloudHariH.filter(
+          (g) => !obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal'
+        );
+        cleanCloud.sort((a, b) => a.no - b.no);
+
+        setHariHGroups(cleanCloud);
+        localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cleanCloud));
+      } else if (cloudHariH && cloudHariH.length === 0) {
+        await bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
+        setHariHGroups(INITIAL_HARI_H_GROUPS);
+        localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
       }
     });
 
@@ -487,11 +501,12 @@ export default function App() {
   }, [hariHGroups, vouchers]);
 
   // Handlers for Hari H
-  const handleToggleHariHStatus = (groupId: string, slot: MealTimeSlot, currentStatus: string) => {
+  const handleToggleHariHStatus = async (groupId: string, slot: MealTimeSlot, currentStatus: string) => {
     if (currentStatus === 'completed') {
       // Revert to pending
-      setHariHGroups((prev) =>
-        prev.map((g) => {
+      let updatedGroup: HariHGroupDistribution | null = null;
+      setHariHGroups((prev) => {
+        const next = prev.map((g) => {
           if (g.id !== groupId) return g;
           const updated = { ...g };
           if (slot === 'pagi') { updated.pagiStatus = 'pending'; updated.pagiPickedAt = undefined; updated.pagiReceiver = undefined; }
@@ -500,9 +515,16 @@ export default function App() {
           else if (slot === 'snack_siang') { updated.snackSiangStatus = 'pending'; updated.snackSiangPickedAt = undefined; updated.snackSiangReceiver = undefined; }
           else if (slot === 'minuman') { updated.minumanStatus = 'pending'; updated.minumanPickedAt = undefined; updated.minumanReceiver = undefined; }
           else if (slot === 'malam') { updated.malamStatus = 'pending'; updated.malamPickedAt = undefined; updated.malamReceiver = undefined; }
+          updatedGroup = updated;
           return updated;
-        })
-      );
+        });
+        localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
+        return next;
+      });
+
+      if (updatedGroup) {
+        await upsertHariHToSupabase(updatedGroup);
+      }
     } else {
       // Open quick modal
       const group = hariHGroups.find((g) => g.id === groupId);
@@ -532,10 +554,11 @@ export default function App() {
     }
   };
 
-  const handleConfirmModal = (receiverName: string, note: string) => {
+  const handleConfirmModal = async (receiverName: string, note: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    setHariHGroups((prev) =>
-      prev.map((g) => {
+    let updatedGroup: HariHGroupDistribution | null = null;
+    setHariHGroups((prev) => {
+      const next = prev.map((g) => {
         if (g.id !== modalData.groupId) return g;
         const updated = { ...g };
         const slot = modalData.slot;
@@ -550,15 +573,23 @@ export default function App() {
         if (note) {
           updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
         }
+        updatedGroup = updated;
         return updated;
-      })
-    );
+      });
+      localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
+      return next;
+    });
+
+    if (updatedGroup) {
+      await upsertHariHToSupabase(updatedGroup);
+    }
   };
 
-  const handleBatchCompleteSlot = (slot: MealTimeSlot) => {
+  const handleBatchCompleteSlot = async (slot: MealTimeSlot) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    setHariHGroups((prev) =>
-      prev.map((g) => {
+    let updatedList: HariHGroupDistribution[] = [];
+    setHariHGroups((prev) => {
+      const next = prev.map((g) => {
         const updated = { ...g };
         if (slot === 'pagi' && updated.pagiQty > 0) { updated.pagiStatus = 'completed'; updated.pagiPickedAt = timeStr; }
         else if (slot === 'snack_pagi' && updated.snackPagiQty > 0) { updated.snackPagiStatus = 'completed'; updated.snackPagiPickedAt = timeStr; }
@@ -567,8 +598,15 @@ export default function App() {
         else if (slot === 'minuman' && updated.minumanQty > 0) { updated.minumanStatus = 'completed'; updated.minumanPickedAt = timeStr; }
         else if (slot === 'malam' && updated.malamQty > 0) { updated.malamStatus = 'completed'; updated.malamPickedAt = timeStr; }
         return updated;
-      })
-    );
+      });
+      updatedList = next;
+      localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
+      return next;
+    });
+
+    if (updatedList.length > 0) {
+      await bulkUpsertHariHToSupabase(updatedList);
+    }
   };
 
   // Handlers for Voucher
@@ -635,59 +673,83 @@ export default function App() {
   };
 
   // Scanner Pickup Handlers
-  const handleScannerConfirmHariH = (
+  const handleScannerConfirmHariH = async (
     groupId: string,
     slot: MealTimeSlot,
     receiverName: string,
     note?: string
   ) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    setHariHGroups((prev) =>
-      prev.map((g) => {
+    let updatedGroup: HariHGroupDistribution | null = null;
+    setHariHGroups((prev) => {
+      const next = prev.map((g) => {
         if (g.id !== groupId) return g;
+        const updated = { ...g };
         if (slot === 'pagi') {
-          return {
-            ...g,
-            pagiStatus: 'completed',
-            pagiPickedAt: timeStr,
-            pagiReceiver: receiverName || g.picName,
-            pagiNotes: note,
-          };
+          updated.pagiStatus = 'completed';
+          updated.pagiPickedAt = timeStr;
+          updated.pagiReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
+        } else if (slot === 'snack_pagi') {
+          updated.snackPagiStatus = 'completed';
+          updated.snackPagiPickedAt = timeStr;
+          updated.snackPagiReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
         } else if (slot === 'siang') {
-          return {
-            ...g,
-            siangStatus: 'completed',
-            siangPickedAt: timeStr,
-            siangReceiver: receiverName || g.picName,
-            siangNotes: note,
-          };
+          updated.siangStatus = 'completed';
+          updated.siangPickedAt = timeStr;
+          updated.siangReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
+        } else if (slot === 'snack_siang') {
+          updated.snackSiangStatus = 'completed';
+          updated.snackSiangPickedAt = timeStr;
+          updated.snackSiangReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
+        } else if (slot === 'minuman') {
+          updated.minumanStatus = 'completed';
+          updated.minumanPickedAt = timeStr;
+          updated.minumanReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
         } else if (slot === 'malam') {
-          return {
-            ...g,
-            malamStatus: 'completed',
-            malamPickedAt: timeStr,
-            malamReceiver: receiverName || g.picName,
-            malamNotes: note,
-          };
+          updated.malamStatus = 'completed';
+          updated.malamPickedAt = timeStr;
+          updated.malamReceiver = receiverName || g.picName;
+          if (note) updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
         }
-        return g;
-      })
-    );
+        updatedGroup = updated;
+        return updated;
+      });
+      localStorage.setItem('hbd_hari_h_groups', JSON.stringify(next));
+      return next;
+    });
+
+    if (updatedGroup) {
+      await upsertHariHToSupabase(updatedGroup);
+    }
   };
 
-  const handleScannerConfirmVoucher = (voucherId: string, receiverName: string) => {
+  const handleScannerConfirmVoucher = async (voucherId: string, receiverName: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    setVouchers((prev) =>
-      prev.map((v) => {
+    let updatedVoucher: VoucherDistributionItem | null = null;
+    setVouchers((prev) => {
+      const next = prev.map((v) => {
         if (v.id !== voucherId) return v;
-        return {
+        const updated = {
           ...v,
-          status: 'claimed',
+          status: 'claimed' as const,
           claimedAt: timeStr,
           receiverName: receiverName || v.picName,
         };
-      })
-    );
+        updatedVoucher = updated;
+        return updated;
+      });
+      localStorage.setItem('hbd_vouchers', JSON.stringify(next));
+      return next;
+    });
+
+    if (updatedVoucher) {
+      await upsertVoucherToSupabase(updatedVoucher);
+    }
   };
 
   // ID Card Activation Handler

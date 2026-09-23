@@ -200,24 +200,73 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       pagi_status: group.pagiStatus,
       pagi_picked_at: group.pagiPickedAt || null,
       pagi_receiver: group.pagiReceiver || null,
+      snack_pagi_qty: group.snackPagiQty || 0,
+      snack_pagi_menu: group.snackPagiMenu || '',
+      snack_pagi_status: group.snackPagiStatus || 'pending',
+      snack_pagi_picked_at: group.snackPagiPickedAt || null,
+      snack_pagi_receiver: group.snackPagiReceiver || null,
       siang_qty: group.siangQty,
       siang_menu: group.siangMenu,
       siang_status: group.siangStatus,
       siang_picked_at: group.siangPickedAt || null,
       siang_receiver: group.siangReceiver || null,
+      snack_siang_qty: group.snackSiangQty || 0,
+      snack_siang_menu: group.snackSiangMenu || '',
+      snack_siang_status: group.snackSiangStatus || 'pending',
+      snack_siang_picked_at: group.snackSiangPickedAt || null,
+      snack_siang_receiver: group.snackSiangReceiver || null,
+      minuman_qty: group.minumanQty || 0,
+      minuman_menu: group.minumanMenu || '',
+      minuman_status: group.minumanStatus || 'pending',
+      minuman_picked_at: group.minumanPickedAt || null,
+      minuman_receiver: group.minumanReceiver || null,
       malam_qty: group.malamQty,
       malam_menu: group.malamMenu,
       malam_status: group.malamStatus,
       malam_picked_at: group.malamPickedAt || null,
       malam_receiver: group.malamReceiver || null,
+      total_amount: group.totalAmount || 0,
+      notes: group.notes || null,
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await client.from('hari_h_distributions').upsert(payload);
+    let { error } = await client.from('hari_h_distributions').upsert(payload);
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const basePayload = {
+        id: group.id,
+        no: group.no,
+        group_name: group.groupName,
+        pic_name: group.picName,
+        pic_phone: group.picPhone || null,
+        pagi_qty: group.pagiQty,
+        pagi_menu: group.pagiMenu,
+        pagi_status: group.pagiStatus,
+        pagi_picked_at: group.pagiPickedAt || null,
+        pagi_receiver: group.pagiReceiver || null,
+        siang_qty: group.siangQty,
+        siang_menu: group.siangMenu,
+        siang_status: group.siangStatus,
+        siang_picked_at: group.siangPickedAt || null,
+        siang_receiver: group.siangReceiver || null,
+        malam_qty: group.malamQty,
+        malam_menu: group.malamMenu,
+        malam_status: group.malamStatus,
+        malam_picked_at: group.malamPickedAt || null,
+        malam_receiver: group.malamReceiver || null,
+        updated_at: new Date().toISOString(),
+      };
+      const retry = await client.from('hari_h_distributions').upsert(basePayload);
+      if (!retry.error) {
+        console.log('[Supabase] Successfully upserted Hari H group (base schema):', group.id, group.groupName);
+        return true;
+      }
+      error = retry.error;
+    }
     if (error) {
       console.warn('[Supabase] Error upserting Hari H group:', error.message);
       return false;
     }
+    console.log('[Supabase] Successfully upserted Hari H group:', group.id, group.groupName);
     return true;
   } catch (err) {
     console.error('[Supabase] Exception upserting Hari H group:', err);

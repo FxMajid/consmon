@@ -116,9 +116,9 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       key: 'malam' as const,
       label: 'Makan Malam',
       time: '17.30 WIB',
-      menuPrimary: 'Ayam Penyet Surabaya (99) & Mbok Jum (367)',
-      totalTarget: 466,
-      badge: '466 Porsi',
+      menuPrimary: 'Ayam Penyet Surabaya (97) & Mbok Jum (367)',
+      totalTarget: 464,
+      badge: '464 Porsi',
       color: 'bg-emerald-700 text-white',
     },
   ];

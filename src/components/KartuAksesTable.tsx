@@ -52,7 +52,20 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
   onOpenImport,
   onClaimMeal,
 }) => {
-  const [subTab, setSubTab] = useState<'id_cards' | 'monitoring_live' | 'master_pic'>('id_cards');
+  const [subTab, setSubTab] = useState<'id_cards' | 'monitoring_live' | 'master_pic'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hbd_kartu_akses_subtab');
+      if (saved && ['id_cards', 'monitoring_live', 'master_pic'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'id_cards';
+  });
+
+  const handleSetSubTab = (tab: 'id_cards' | 'monitoring_live' | 'master_pic') => {
+    setSubTab(tab);
+    localStorage.setItem('hbd_kartu_akses_subtab', tab);
+  };
 
   // ID Cards state filters
   const [idSearchQuery, setIdSearchQuery] = useState('');
@@ -251,7 +264,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
       {/* Sub Navigation Switcher */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <button
-          onClick={() => setSubTab('id_cards')}
+          onClick={() => handleSetSubTab('id_cards')}
           className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors ${
             subTab === 'id_cards'
               ? 'bg-blue-600 text-white shadow-xs'
@@ -263,7 +276,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
         </button>
 
         <button
-          onClick={() => setSubTab('monitoring_live')}
+          onClick={() => handleSetSubTab('monitoring_live')}
           className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors ${
             subTab === 'monitoring_live'
               ? 'bg-emerald-600 text-white shadow-xs'
@@ -279,7 +292,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
         </button>
 
         <button
-          onClick={() => setSubTab('master_pic')}
+          onClick={() => handleSetSubTab('master_pic')}
           className={`inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors ${
             subTab === 'master_pic'
               ? 'bg-blue-600 text-white shadow-xs'

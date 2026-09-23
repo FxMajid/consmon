@@ -48,7 +48,21 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
   onDeleteVoucher,
   onOpenBarcodeCard
 }) => {
-  const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'H+1' | 'all'>('H-1');
+  const [selectedDay, setSelectedDay] = useState<'H-2' | 'H-1' | 'H+1' | 'all'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hbd_voucher_selected_day');
+      if (saved && ['H-2', 'H-1', 'H+1', 'all'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'H-1';
+  });
+
+  const handleSelectDay = (day: 'H-2' | 'H-1' | 'H+1' | 'all') => {
+    setSelectedDay(day);
+    setSelectedMealType('all');
+    localStorage.setItem('hbd_voucher_selected_day', day);
+  };
   const [selectedMealType, setSelectedMealType] = useState<'all' | 'Makan Siang' | 'Makan Malam' | 'Minuman'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'claimed'>('all');
@@ -167,7 +181,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex items-center space-x-2 flex-wrap gap-y-2">
           <button
-            onClick={() => { setSelectedDay('H-2'); setSelectedMealType('all'); }}
+            onClick={() => handleSelectDay('H-2')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               selectedDay === 'H-2'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -182,7 +196,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
           </button>
 
           <button
-            onClick={() => { setSelectedDay('H-1'); setSelectedMealType('all'); }}
+            onClick={() => handleSelectDay('H-1')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               selectedDay === 'H-1'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -197,7 +211,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
           </button>
 
           <button
-            onClick={() => { setSelectedDay('H+1'); setSelectedMealType('all'); }}
+            onClick={() => handleSelectDay('H+1')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               selectedDay === 'H+1'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -212,7 +226,7 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
           </button>
 
           <button
-            onClick={() => { setSelectedDay('all'); setSelectedMealType('all'); }}
+            onClick={() => handleSelectDay('all')}
             className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
               selectedDay === 'all'
                 ? 'bg-slate-800 text-white'

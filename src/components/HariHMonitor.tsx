@@ -53,7 +53,22 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
   onOpenImport,
   onOpenBarcodeCard
 }) => {
-  const [selectedSlot, setSelectedSlot] = useState<MealTimeSlot | 'all'>('siang');
+  const [selectedSlot, setSelectedSlot] = useState<MealTimeSlot | 'all'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hbd_hari_h_selected_slot');
+      if (saved && ['all', 'pagi', 'snack_pagi', 'siang', 'snack_siang', 'minuman', 'malam'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'siang';
+  });
+
+  const handleSelectSlot = (slot: MealTimeSlot | 'all') => {
+    setSelectedSlot(slot);
+    setSelectedMenuFilter('all');
+    localStorage.setItem('hbd_hari_h_selected_slot', slot);
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Internal' | 'Eksternal' | 'Buffer'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
@@ -415,10 +430,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
             return (
               <button
                 key={slot.key}
-                onClick={() => {
-                  setSelectedSlot(slot.key);
-                  setSelectedMenuFilter('all');
-                }}
+                onClick={() => handleSelectSlot(slot.key)}
                 className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden ${
                   isSelected
                     ? 'border-red-600 bg-red-50 ring-2 ring-red-500/20 shadow-xs'

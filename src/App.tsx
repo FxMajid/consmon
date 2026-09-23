@@ -51,7 +51,44 @@ import {
 import { INITIAL_ID_CARDS } from './data/idCardData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master'>('hari_h');
+  const [activeTab, setActiveTab] = useState<'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (['hari_h', 'voucher', 'kartu_akses', 'menu', 'budget', 'master'].includes(hash)) {
+        return hash as any;
+      }
+      const saved = localStorage.getItem('hbd_active_tab');
+      if (saved && ['hari_h', 'voucher', 'kartu_akses', 'menu', 'budget', 'master'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'hari_h';
+  });
+
+  // Sync tab changes with localStorage and URL Hash
+  const handleTabChange = (tab: 'hari_h' | 'voucher' | 'kartu_akses' | 'menu' | 'budget' | 'master') => {
+    setActiveTab(tab);
+    localStorage.setItem('hbd_active_tab', tab);
+    if (window.location.hash !== `#${tab}`) {
+      window.history.replaceState(null, '', `#${tab}`);
+    }
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (['hari_h', 'voucher', 'kartu_akses', 'menu', 'budget', 'master'].includes(hash)) {
+        setActiveTab(hash as any);
+        localStorage.setItem('hbd_active_tab', hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    // Initialize current hash if empty
+    if (!window.location.hash && activeTab) {
+      window.history.replaceState(null, '', `#${activeTab}`);
+    }
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
 
   // Persistence in localStorage
   const [hariHGroups, setHariHGroups] = useState<HariHGroupDistribution[]>(() => {
@@ -1154,7 +1191,7 @@ export default function App() {
       {/* App Header & Navigation */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         stats={globalStats}
         onResetData={handleResetData}
         onExportCsv={handleExportCsv}

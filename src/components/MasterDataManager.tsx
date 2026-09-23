@@ -78,7 +78,20 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
   onDeleteMenu,
   onRefreshCloudData,
 }) => {
-  const [activeTab, setActiveTab] = useState<MasterTab>('hari_h');
+  const [activeTab, setActiveTab] = useState<MasterTab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('hbd_master_subtab');
+      if (saved && ['hari_h', 'voucher', 'id_cards', 'menu'].includes(saved)) {
+        return saved as any;
+      }
+    }
+    return 'hari_h';
+  });
+
+  const handleSetActiveTab = (tab: MasterTab) => {
+    setActiveTab(tab);
+    localStorage.setItem('hbd_master_subtab', tab);
+  };
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Common Notification
@@ -606,7 +619,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
       {/* Navigation Sub-Tabs */}
       <div className="flex items-center space-x-1 border-b border-slate-200 overflow-x-auto pb-1">
         <button
-          onClick={() => setActiveTab('hari_h')}
+          onClick={() => handleSetActiveTab('hari_h')}
           className={`flex items-center space-x-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all ${
             activeTab === 'hari_h'
               ? 'border-red-600 text-red-600 bg-white shadow-2xs'
@@ -618,7 +631,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('voucher')}
+          onClick={() => handleSetActiveTab('voucher')}
           className={`flex items-center space-x-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all ${
             activeTab === 'voucher'
               ? 'border-amber-600 text-amber-600 bg-white shadow-2xs'
@@ -630,7 +643,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('id_cards')}
+          onClick={() => handleSetActiveTab('id_cards')}
           className={`flex items-center space-x-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all ${
             activeTab === 'id_cards'
               ? 'border-blue-600 text-blue-600 bg-white shadow-2xs'
@@ -642,7 +655,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('menu')}
+          onClick={() => handleSetActiveTab('menu')}
           className={`flex items-center space-x-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all ${
             activeTab === 'menu'
               ? 'border-emerald-600 text-emerald-600 bg-white shadow-2xs'

@@ -168,6 +168,28 @@ CREATE TABLE IF NOT EXISTS public.vouchers (
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- Penambahan Kolom Jika Tabel Sudah Pernah Dibuat Sebelumnya (Migrasi Aman)
+ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS meal_type TEXT DEFAULT 'Makan Siang';
+ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS unit_price INTEGER DEFAULT 0;
+ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS total_price INTEGER DEFAULT 0;
+ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS notes TEXT;
+
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_menu TEXT DEFAULT '';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_receiver TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_siang_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_siang_menu TEXT DEFAULT '';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_siang_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_siang_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_siang_receiver TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_menu TEXT DEFAULT '';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS minuman_receiver TEXT;
+
 -- Berikan izin penuh (SELECT, INSERT, UPDATE, DELETE) untuk role anon dan authenticated
 GRANT ALL ON TABLE public.id_cards_konsumsi TO anon, authenticated;
 GRANT ALL ON TABLE public.hari_h_distributions TO anon, authenticated;

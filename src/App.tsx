@@ -52,16 +52,9 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (
-          Array.isArray(parsed) &&
-          (parsed.some((g: any) => g.id === 'h-grp-1' || g.id === 'h-grp-md-15' || g.id === 'h-grp-4' || g.id === 'h-grp-8' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
-            !parsed.some((g: any) => g.id === 'h-grp-25') ||
-            parsed.length < 60)
-        ) {
-          localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
-          return INITIAL_HARI_H_GROUPS;
+        if (Array.isArray(parsed)) {
+          return parsed;
         }
-        return parsed;
       } catch (e) {
         console.error('Error parsing saved hari_h groups', e);
       }
@@ -74,15 +67,9 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (
-          Array.isArray(parsed) &&
-          (!parsed.some((v: any) => v.id === 'vouch-h2-1' && v.picName === '16 PIC') ||
-            parsed.length < 8)
-        ) {
-          localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
-          return INITIAL_VOUCHER_DATA;
+        if (Array.isArray(parsed)) {
+          return parsed;
         }
-        return parsed;
       } catch (e) {
         console.error('Error parsing saved vouchers', e);
       }
@@ -305,21 +292,17 @@ export default function App() {
     });
 
     fetchVouchersFromSupabase().then(async (cloudVouchers) => {
-      if (cloudVouchers && cloudVouchers.length > 0) {
+      if (cloudVouchers !== null) {
         // Clean up legacy or duplicate old ids if present
         if (cloudVouchers.some((v) => v.id === 'vouch-h1-1' || v.id === 'vouch-h1-md-1')) {
           await deleteVoucherFromSupabase('vouch-h1-1');
           await deleteVoucherFromSupabase('vouch-h1-md-1');
         }
 
-        // Always honor current cloud vouchers from database
+        // Always honor current cloud vouchers from database (even if empty because user deleted all)
         setVouchers(cloudVouchers);
         localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
-      } else {
-        // Seed initial data only if table is completely empty
-        await bulkUpsertVouchersToSupabase(INITIAL_VOUCHER_DATA);
-        setVouchers(INITIAL_VOUCHER_DATA);
-        localStorage.setItem('hbd_vouchers', JSON.stringify(INITIAL_VOUCHER_DATA));
+        localStorage.setItem('hbd_cloud_vouchers_seeded', 'true');
       }
     });
 
@@ -349,8 +332,9 @@ export default function App() {
         { event: '*', schema: 'public', table: 'hari_h_distributions' },
         () => {
           fetchHariHFromSupabase().then((cloudHariH) => {
-            if (cloudHariH && cloudHariH.length > 0) {
+            if (cloudHariH !== null) {
               setHariHGroups(cloudHariH);
+              localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cloudHariH));
             }
           });
         }
@@ -364,8 +348,9 @@ export default function App() {
         { event: '*', schema: 'public', table: 'vouchers' },
         () => {
           fetchVouchersFromSupabase().then((cloudVouchers) => {
-            if (cloudVouchers && cloudVouchers.length > 0) {
+            if (cloudVouchers !== null) {
               setVouchers(cloudVouchers);
+              localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
             }
           });
         }

@@ -285,7 +285,35 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
       updated_at: new Date().toISOString(),
     }));
 
-    const { error } = await client.from('hari_h_distributions').upsert(payloads);
+    let { error } = await client.from('hari_h_distributions').upsert(payloads);
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const basePayloads = groups.map((group) => ({
+        id: group.id,
+        no: group.no,
+        group_name: group.groupName,
+        pic_name: group.picName,
+        pic_phone: group.picPhone || null,
+        pagi_qty: group.pagiQty,
+        pagi_menu: group.pagiMenu,
+        pagi_status: group.pagiStatus,
+        pagi_picked_at: group.pagiPickedAt || null,
+        pagi_receiver: group.pagiReceiver || null,
+        siang_qty: group.siangQty,
+        siang_menu: group.siangMenu,
+        siang_status: group.siangStatus,
+        siang_picked_at: group.siangPickedAt || null,
+        siang_receiver: group.siangReceiver || null,
+        malam_qty: group.malamQty,
+        malam_menu: group.malamMenu,
+        malam_status: group.malamStatus,
+        malam_picked_at: group.malamPickedAt || null,
+        malam_receiver: group.malamReceiver || null,
+        updated_at: new Date().toISOString(),
+      }));
+      const retry = await client.from('hari_h_distributions').upsert(basePayloads);
+      if (!retry.error) return true;
+      error = retry.error;
+    }
     if (error) {
       console.warn('[Supabase] Bulk upsert Hari H error:', error.message);
       return false;
@@ -398,7 +426,27 @@ export async function upsertVoucherToSupabase(voucher: VoucherDistributionItem):
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await client.from('vouchers').upsert(payload);
+    let { error } = await client.from('vouchers').upsert(payload);
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const basePayload = {
+        id: voucher.id,
+        day: voucher.day,
+        group_no: voucher.groupNo,
+        group_name: voucher.groupName,
+        pic_name: voucher.picName,
+        pic_phone: voucher.picPhone || null,
+        qty: voucher.qty,
+        menu_vendor: voucher.menuVendor,
+        status: voucher.status,
+        claimed_at: voucher.claimedAt || null,
+        receiver_name: voucher.receiverName || null,
+        voucher_code: voucher.voucherCode || null,
+        updated_at: new Date().toISOString(),
+      };
+      const retry = await client.from('vouchers').upsert(basePayload);
+      if (!retry.error) return true;
+      error = retry.error;
+    }
     if (error) {
       console.warn('[Supabase] Error upserting voucher:', error.message);
       return false;
@@ -435,7 +483,27 @@ export async function bulkUpsertVouchersToSupabase(vouchers: VoucherDistribution
       updated_at: new Date().toISOString(),
     }));
 
-    const { error } = await client.from('vouchers').upsert(payloads);
+    let { error } = await client.from('vouchers').upsert(payloads);
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const basePayloads = vouchers.map((voucher) => ({
+        id: voucher.id,
+        day: voucher.day,
+        group_no: voucher.groupNo,
+        group_name: voucher.groupName,
+        pic_name: voucher.picName,
+        pic_phone: voucher.picPhone || null,
+        qty: voucher.qty,
+        menu_vendor: voucher.menuVendor,
+        status: voucher.status,
+        claimed_at: voucher.claimedAt || null,
+        receiver_name: voucher.receiverName || null,
+        voucher_code: voucher.voucherCode || null,
+        updated_at: new Date().toISOString(),
+      }));
+      const retry = await client.from('vouchers').upsert(basePayloads);
+      if (!retry.error) return true;
+      error = retry.error;
+    }
     if (error) {
       console.warn('[Supabase] Bulk upsert vouchers error:', error.message);
       return false;

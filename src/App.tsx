@@ -53,7 +53,8 @@ export default function App() {
         if (
           Array.isArray(parsed) &&
           (parsed.some((g: any) => g.id === 'h-grp-1' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
-            parsed.length < 30)
+            !parsed.some((g: any) => g.id === 'h-grp-md-15') ||
+            parsed.length < 32)
         ) {
           localStorage.setItem('hbd_hari_h_groups', JSON.stringify(INITIAL_HARI_H_GROUPS));
           return INITIAL_HARI_H_GROUPS;
@@ -273,7 +274,8 @@ export default function App() {
       if (cloudHariH && cloudHariH.length > 0) {
         if (
           cloudHariH.some((g) => g.id === 'h-grp-1' || g.groupName === 'Panitia MD' || g.picName === '16 PIC Internal') ||
-          cloudHariH.length < 30
+          !cloudHariH.some((g) => g.id === 'h-grp-md-15') ||
+          cloudHariH.length < 32
         ) {
           // Obsolete combined Panitia MD row found in Supabase - auto-migrate to detailed PIC groups
           await deleteHariHGroupFromSupabase('h-grp-1');

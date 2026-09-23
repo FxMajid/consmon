@@ -210,6 +210,10 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
       const picName = row.pic_name || row.pic || row['nama pic'] || 'PIC Lapangan';
       const picPhone = row.pic_phone || row.phone || row['no wa'] || row.kontak || '';
 
+      // Support Anggota Makan / Penerima Porsi
+      const members = row.members || row.anggota || row['daftar anggota'] || row['nama anggota'] || row['anggota makan'] || row.peserta || '';
+      const notes = row.notes || row.catatan || row.keterangan || (members ? `Anggota: ${members}` : '');
+
       const pagiQty = parseInt(row.pagi_qty || row.pagi || row['qty pagi'] || '0', 10) || 0;
       const pagiMenu = row.pagi_menu || row['menu pagi'] || (pagiQty > 0 ? 'Nasi Kuning Komplit + Telur Balado' : '');
       const pagiStatus = (row.pagi_status || (pagiQty > 0 ? 'pending' : 'pending')) as any;
@@ -248,6 +252,8 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
         malamMenu,
         malamStatus,
         totalAmount: 0,
+        members: members || undefined,
+        notes: notes || undefined,
       };
     });
   };
@@ -264,6 +270,8 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
       const qty = parseInt(row.qty || row.jumlah || row.porsi || '10', 10) || 10;
       const menuVendor = row.menu_vendor || row.vendor || row.menu || 'Resto Partner HBD';
       const status = (row.status || 'pending') as any;
+      const members = row.members || row.anggota || row['daftar anggota'] || row['nama anggota'] || '';
+      const notes = row.notes || row.catatan || (members ? `Anggota: ${members}` : '');
 
       return {
         id,
@@ -279,6 +287,8 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
         totalPrice: 0,
         status,
         voucherCode: row.voucher_code || row.kode || `VCH-${day}-${groupNo}`,
+        members: members || undefined,
+        notes: notes || undefined,
       };
     });
   };
@@ -355,18 +365,18 @@ export const DataImportModal: React.FC<DataImportModalProps> = ({
         'IDC-003,HBD-2026-003,Andi Wijaya,andi@example.com,Security & Parking,Internal\n';
     } else if (category === 'hari_h') {
       filePrefix = 'template_import_hari_h';
-      csvHeader = 'no,group_name,pic_name,pic_phone,pagi_qty,siang_qty,malam_qty\n';
+      csvHeader = 'no,group_name,pic_name,pic_phone,pagi_qty,siang_qty,malam_qty,members,notes\n';
       sampleRows = 
-        '1,Panitia Inti & Koor,Agus Setiawan,081234567890,25,25,25\n' +
-        '2,Tim Stage & Audio,Rizky Pratama,081298765432,15,15,15\n' +
-        '3,Security & Parkir,Bambang,081345678901,10,10,10\n';
+        '1,Booth Games Zone 3,Ahmad Farhan,082183856996,2,2,2,"Febrianesa Parengkuan, Ahmad Farhan Lubis",Pos Booth Games\n' +
+        '2,Tim Stage & Audio,Rizky Pratama,081298765432,15,15,15,"Budi, Dimas, Rian, Bayu, Hendra",Backstage\n' +
+        '3,Security & Parkir,Bambang,081345678901,10,10,10,"10 Petugas Shift Pagi & Malam",Main Gate\n';
     } else {
       filePrefix = 'template_import_vouchers';
-      csvHeader = 'day,group_no,group_name,pic_name,pic_phone,qty,menu_vendor\n';
+      csvHeader = 'day,group_no,group_name,pic_name,pic_phone,qty,menu_vendor,members\n';
       sampleRows = 
-        'H-1,1,Loading Tim Stage,Dimas,081234567890,12,Dapur Berkah HBD\n' +
-        'H-1,2,Setup Tenda & Booth,Wahyu,081398765432,8,Catering Ibu Ani\n' +
-        'H-2,3,Tim Runner Logistik,Fajar,081255566677,6,Sederhana Padang\n';
+        'H-1,1,Loading Tim Stage,Dimas,081234567890,12,Dapur Berkah HBD,"Dimas, Bayu, Rian, dkk"\n' +
+        'H-1,2,Setup Tenda & Booth,Wahyu,081398765432,8,Catering Ibu Ani,"Wahyu, Arif, Dani, dkk"\n' +
+        'H-2,3,Tim Runner Logistik,Fajar,081255566677,6,Sederhana Padang,"Fajar, Kiki, Rudi"\n';
     }
 
     const blob = new Blob([csvHeader + sampleRows], { type: 'text/csv;charset=utf-8;' });

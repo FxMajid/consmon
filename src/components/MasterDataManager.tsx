@@ -32,7 +32,8 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronDown,
-  Info
+  Info,
+  Users
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -111,6 +112,8 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
           item.no.toString().includes(q) ||
           item.groupName.toLowerCase().includes(q) ||
           item.picName.toLowerCase().includes(q) ||
+          item.members?.toLowerCase().includes(q) ||
+          item.notes?.toLowerCase().includes(q) ||
           item.picPhone.includes(q);
         if (!match) return false;
       }
@@ -213,6 +216,8 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
           item.groupName.toLowerCase().includes(q) ||
           item.picName.toLowerCase().includes(q) ||
           item.menuVendor.toLowerCase().includes(q) ||
+          item.members?.toLowerCase().includes(q) ||
+          item.notes?.toLowerCase().includes(q) ||
           item.id.toLowerCase().includes(q);
         if (!match) return false;
       }
@@ -749,7 +754,13 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{group.groupName}</div>
-                            {group.notes && (
+                            {(group.members || (group.notes && group.notes.toLowerCase().includes('anggota'))) && (
+                              <div className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-1 flex items-center gap-1 max-w-xs truncate" title={group.members || group.notes}>
+                                <Users className="w-3 h-3 text-blue-600 shrink-0" />
+                                <span>Anggota: {group.members || group.notes?.replace(/^Anggota:\s*/i, '')}</span>
+                              </div>
+                            )}
+                            {group.notes && !group.notes.toLowerCase().startsWith('anggota:') && (
                               <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs" title={group.notes}>
                                 {group.notes}
                               </div>
@@ -936,7 +947,18 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-3 font-semibold text-slate-900">
-                          {v.groupName}
+                          <div>{v.groupName}</div>
+                          {(v.members || (v.notes && v.notes.toLowerCase().includes('anggota'))) && (
+                            <div className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-1 flex items-center gap-1 max-w-xs truncate" title={v.members || v.notes}>
+                              <Users className="w-3 h-3 text-amber-700 shrink-0" />
+                              <span>Anggota: {v.members || v.notes?.replace(/^Anggota:\s*/i, '')}</span>
+                            </div>
+                          )}
+                          {v.notes && !v.notes.toLowerCase().startsWith('anggota:') && (
+                            <div className="text-[10px] text-slate-400 mt-0.5 font-normal truncate max-w-xs" title={v.notes}>
+                              {v.notes}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-3">
                           <div className="font-medium text-slate-800">{v.picName}</div>
@@ -1535,6 +1557,27 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                 </div>
               </div>
 
+              {/* Anggota Makan / Daftar Penerima yang Diambil PIC */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                    Daftar Nama Anggota Makan (Akan Diambil oleh PIC)
+                  </span>
+                  <span className="text-[11px] font-normal text-slate-400">Pisahkan dengan koma</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingHariH.members || ''}
+                  onChange={(e) => setEditingHariH({ ...editingHariH, members: e.target.value })}
+                  placeholder="Contoh: Febrianesa Parengkuan, Ahmad Farhan Lubis, Budi Santoso"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Data ini ditampilkan saat PIC mengambil porsi di meja pos konsumsi atau saat scan barcode.
+                </p>
+              </div>
+
               {/* Notes */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Catatan Tambahan / Lokasi Pengambilan</label>
@@ -1734,6 +1777,24 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                     Rp {((editingVoucher.qty || 1) * (editingVoucher.unitPrice || 0)).toLocaleString('id-ID')}
                   </div>
                 </div>
+              </div>
+
+              {/* Anggota Penerima Voucher */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-amber-700" />
+                    Daftar Nama Anggota Penerima Voucher (Diambil oleh PIC)
+                  </span>
+                  <span className="text-[11px] font-normal text-slate-400">Pisahkan dengan koma</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingVoucher.members || ''}
+                  onChange={(e) => setEditingVoucher({ ...editingVoucher, members: e.target.value })}
+                  placeholder="Contoh: Dimas, Bayu, Rian, Hendra"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 bg-white"
+                />
               </div>
 
               <div>

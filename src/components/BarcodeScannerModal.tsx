@@ -12,7 +12,8 @@ import {
   Utensils,
   Ticket,
   Search,
-  Volume2
+  Volume2,
+  Users
 } from 'lucide-react';
 import { 
   HariHGroupDistribution, 
@@ -791,6 +792,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                       {scanResult.group?.picName || scanResult.voucher?.picName} ({scanResult.group?.picPhone || scanResult.voucher?.picPhone})
                     </span>
                   </div>
+
+                  {/* Anggota Makan / Penerima Porsi */}
+                  {(scanResult.group?.members || scanResult.voucher?.members || 
+                    (scanResult.group?.notes && scanResult.group.notes.toLowerCase().includes('anggota')) ||
+                    (scanResult.voucher?.notes && scanResult.voucher.notes.toLowerCase().includes('anggota'))) && (
+                    <div className="bg-white/80 p-2 rounded-lg border border-slate-200 flex items-start space-x-1.5 text-[11px] text-blue-900">
+                      <Users className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-blue-800">Anggota Makan Diambil PIC: </span>
+                        <span>
+                          {scanResult.group?.members || scanResult.voucher?.members || 
+                           (scanResult.group?.notes ? scanResult.group.notes.replace(/^Anggota:\s*/i, '') : scanResult.voucher?.notes?.replace(/^Anggota:\s*/i, ''))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between">
                     <span className="text-slate-600">Jatah Menu:</span>
                     <span className="font-bold text-slate-900">

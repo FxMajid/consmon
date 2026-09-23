@@ -8,7 +8,8 @@ import {
   Barcode as BarcodeIcon, 
   Building, 
   Clock, 
-  CheckCircle2 
+  CheckCircle2,
+  Users
 } from 'lucide-react';
 import { generateQrDataUrl } from '../utils/barcodeUtils';
 import { MealTimeSlot } from '../types';
@@ -26,6 +27,7 @@ interface BarcodeCardModalProps {
     barcodeCode: string;
     status: string;
     category?: string;
+    members?: string;
   } | null;
 }
 
@@ -132,6 +134,18 @@ export const BarcodeCardModal: React.FC<BarcodeCardModalProps> = ({
             <span>PIC: <strong>{barcodeData.picName}</strong></span>
             {barcodeData.picPhone && <span>&bull; {barcodeData.picPhone}</span>}
           </div>
+
+          {barcodeData.members && (
+            <div className="mt-2 bg-blue-50/80 border border-blue-200/80 rounded-lg p-2 text-left text-[11px] text-blue-900">
+              <div className="flex items-center space-x-1 font-bold text-blue-800 mb-0.5">
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>Anggota Makan Diambil PIC:</span>
+              </div>
+              <div className="text-slate-700 leading-tight">
+                {barcodeData.members}
+              </div>
+            </div>
+          )}
 
           <div className="my-3 bg-white p-2.5 rounded-xl border border-slate-200 inline-block w-full text-left">
             <div className="flex justify-between text-xs">

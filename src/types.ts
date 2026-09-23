@@ -65,6 +65,7 @@ export interface HariHGroupDistribution {
 
   totalAmount: number;
   notes?: string;
+  members?: string; // Daftar nama anggota yang makanannya diambil oleh PIC
 }
 
 export interface VoucherDistributionItem {
@@ -84,6 +85,7 @@ export interface VoucherDistributionItem {
   claimedAt?: string;
   receiverName?: string;
   notes?: string;
+  members?: string; // Daftar nama anggota / penerima porsi
 }
 
 export interface IndividualAccessCard {

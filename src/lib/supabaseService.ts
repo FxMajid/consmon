@@ -206,6 +206,7 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         malamPickedAt: r.malam_picked_at || undefined,
         malamReceiver: r.malam_receiver || undefined,
         totalAmount: r.total_amount || 0,
+        members: r.members || (r.notes && r.notes.toLowerCase().startsWith('anggota:') ? r.notes.replace(/^Anggota:\s*/i, '') : undefined),
         notes: r.notes || undefined,
       };
     });
@@ -673,6 +674,7 @@ export async function fetchVouchersFromSupabase(): Promise<VoucherDistributionIt
         claimedAt: v.claimed_at || undefined,
         receiverName: v.receiver_name || undefined,
         voucherCode: v.voucher_code || undefined,
+        members: v.members || (v.notes && v.notes.toLowerCase().startsWith('anggota:') ? v.notes.replace(/^Anggota:\s*/i, '') : undefined),
         notes: v.notes || undefined,
       };
     });

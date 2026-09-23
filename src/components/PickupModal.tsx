@@ -10,6 +10,7 @@ interface PickupModalProps {
   menu: string;
   qty: number;
   timeSlotLabel: string;
+  members?: string;
 }
 
 export const PickupModal: React.FC<PickupModalProps> = ({
@@ -20,7 +21,8 @@ export const PickupModal: React.FC<PickupModalProps> = ({
   picName,
   menu,
   qty,
-  timeSlotLabel
+  timeSlotLabel,
+  members
 }) => {
   const [receiverName, setReceiverName] = useState('');
   const [note, setNote] = useState('');
@@ -64,6 +66,14 @@ export const PickupModal: React.FC<PickupModalProps> = ({
               <span className="text-slate-500">PIC Resmi:</span>
               <span className="font-semibold text-slate-700">{picName}</span>
             </div>
+            {members && (
+              <div className="pt-1 border-t border-slate-200/60">
+                <span className="text-slate-500 block text-[11px]">Anggota Makan Diambil PIC:</span>
+                <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block mt-0.5">
+                  {members}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-slate-500">Sesi Waktu:</span>
               <span className="font-semibold text-red-600">{timeSlotLabel}</span>

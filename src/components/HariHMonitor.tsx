@@ -21,7 +21,8 @@ import {
   Scan,
   QrCode,
   Sparkles,
-  Upload
+  Upload,
+  Users
 } from 'lucide-react';
 import { getBarcodeForSlot, getBarcodeForGroupGeneral } from '../utils/barcodeUtils';
 
@@ -185,6 +186,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
         grp.groupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         grp.picName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         grp.picPhone.includes(searchQuery) ||
+        grp.members?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         grp.notes?.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchSearch) return false;
@@ -712,7 +714,20 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                           )}
                         </div>
 
-                        {group.notes && (
+                        {/* Anggota Makan yang diambil oleh PIC */}
+                        {(group.members || (group.notes && group.notes.toLowerCase().includes('anggota'))) && (
+                          <div className="mt-1.5 flex items-start space-x-1.5 bg-blue-50/70 border border-blue-200/80 rounded-lg px-2.5 py-1 text-[11px] text-blue-900 max-w-xl">
+                            <Users className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold text-blue-800">Anggota Makan Diambil PIC: </span>
+                              <span className="font-medium">
+                                {group.members || group.notes?.replace(/^Anggota:\s*/i, '')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {group.notes && !group.notes.toLowerCase().startsWith('anggota:') && (
                           <div className="text-[11px] text-slate-400 mt-1 italic">
                             Catatan: {group.notes}
                           </div>
@@ -822,6 +837,19 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                         PIC: <strong className="text-slate-800">{group.picName}</strong>
                         {group.picPhone && <span className="ml-2 font-mono">WA: {group.picPhone}</span>}
                       </div>
+
+                      {/* Anggota Makan yang diambil oleh PIC */}
+                      {(group.members || (group.notes && group.notes.toLowerCase().includes('anggota'))) && (
+                        <div className="mt-1 flex items-start space-x-1.5 bg-blue-50/70 border border-blue-200/80 rounded-lg px-2.5 py-0.5 text-[11px] text-blue-900 max-w-xl">
+                          <Users className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-blue-800">Anggota Makan Diambil PIC: </span>
+                            <span className="font-medium">
+                              {group.members || group.notes?.replace(/^Anggota:\s*/i, '')}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

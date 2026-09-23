@@ -237,6 +237,7 @@ export default function App() {
     menu: string;
     qty: number;
     timeSlotLabel: string;
+    members?: string;
   }>({
     isOpen: false,
     groupId: '',
@@ -601,6 +602,7 @@ export default function App() {
         menu,
         qty,
         timeSlotLabel,
+        members: group.members || (group.notes?.toLowerCase().includes('anggota') ? group.notes.replace(/^Anggota:\s*/i, '') : undefined),
       });
     }
   };
@@ -1249,6 +1251,7 @@ export default function App() {
         menu={modalData.menu}
         qty={modalData.qty}
         timeSlotLabel={modalData.timeSlotLabel}
+        members={modalData.members}
       />
 
       {/* Barcode Scanner Modal for Camera / USB Barcode Gun */}

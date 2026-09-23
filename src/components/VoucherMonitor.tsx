@@ -14,7 +14,8 @@ import {
   Scan,
   QrCode,
   Upload,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import { getBarcodeForVoucher } from '../utils/barcodeUtils';
 
@@ -68,6 +69,8 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
         v.picName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         v.menuVendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
         v.voucherCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.members?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         v.picPhone.includes(searchQuery);
 
       return matchesSearch;
@@ -429,9 +432,22 @@ export const VoucherMonitor: React.FC<VoucherMonitorProps> = ({
                         )}
                       </div>
 
-                      {item.notes && (
+                      {/* Anggota Makan Penerima Voucher */}
+                      {(item.members || (item.notes && item.notes.toLowerCase().includes('anggota'))) && (
+                        <div className="mt-1.5 flex items-start space-x-1.5 bg-amber-50/80 border border-amber-200/80 rounded-lg px-2.5 py-1 text-[11px] text-amber-900 max-w-xl">
+                          <Users className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-amber-800">Anggota Penerima Voucher: </span>
+                            <span className="font-medium">
+                              {item.members || item.notes?.replace(/^Anggota:\s*/i, '')}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.notes && !item.notes.toLowerCase().startsWith('anggota:') && (
                         <div className="text-[11px] text-slate-500 mt-1 italic">
-                          {item.notes}
+                          Catatan: {item.notes}
                         </div>
                       )}
                     </div>

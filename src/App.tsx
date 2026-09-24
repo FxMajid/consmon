@@ -1377,6 +1377,7 @@ export default function App() {
         {activeTab === 'hari_h' && (
           <HariHMonitor
             groups={hariHGroups}
+            idCards={idCards}
             onToggleStatus={handleToggleHariHStatus}
             onBatchCompleteSlot={handleBatchCompleteSlot}
             onOpenScanner={() => setIsScannerOpen(true)}

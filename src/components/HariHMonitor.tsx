@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   HariHGroupDistribution, 
-  MealTimeSlot 
+  MealTimeSlot,
+  IDCardKonsumsi
 } from '../types';
 import { 
   CheckCircle2, 
@@ -30,8 +31,76 @@ import {
 } from 'lucide-react';
 import { getBarcodeForSlot, getBarcodeForGroupGeneral } from '../utils/barcodeUtils';
 
+/**
+ * Checks if a Hari H group/division has been activated by any registered ID Card in "ID Card & Aktivasi QR"
+ */
+export function isGroupActivatedByIdCards(
+  group: HariHGroupDistribution,
+  idCards?: IDCardKonsumsi[]
+): { isActivated: boolean; matchedCard?: IDCardKonsumsi } {
+  if (!idCards || idCards.length === 0) return { isActivated: false };
+
+  const activeCards = idCards.filter((c) => c.status === 'active');
+  if (activeCards.length === 0) return { isActivated: false };
+
+  const clean = (str: string) =>
+    (str || '')
+      .toLowerCase()
+      .replace(/panitia\s*md\s*[-–:]*/gi, '')
+      .replace(/divisi\s*/gi, '')
+      .replace(/[^\w\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const groupClean = clean(group.groupName);
+  const picClean = clean(group.picName);
+  const membersClean = clean(group.members || group.notes || '');
+
+  for (const card of activeCards) {
+    const holderClean = clean(card.holderName || '');
+    const areaClean = clean(card.areaKerja || '');
+
+    // 1. Match by holder name in group picName, members list, or notes
+    if (holderClean && holderClean.length >= 3) {
+      if (picClean.includes(holderClean) || holderClean.includes(picClean)) {
+        return { isActivated: true, matchedCard: card };
+      }
+      if (membersClean.includes(holderClean)) {
+        return { isActivated: true, matchedCard: card };
+      }
+      // Check individual name parts (first name or last name >= 4 chars, e.g. "indra" from "Indra Jaya")
+      const words = holderClean.split(' ').filter((w) => w.length >= 4);
+      for (const w of words) {
+        if (membersClean.includes(w) || picClean.includes(w)) {
+          return { isActivated: true, matchedCard: card };
+        }
+      }
+    }
+
+    // 2. Match by area kerja with group name / members / notes
+    if (areaClean && areaClean.length >= 3) {
+      if (groupClean.includes(areaClean) || areaClean.includes(groupClean)) {
+        return { isActivated: true, matchedCard: card };
+      }
+
+      // Check keyword parts of area kerja
+      const areaKeywords = areaClean
+        .split(' ')
+        .filter((w) => w.length >= 4 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos'].includes(w));
+      for (const kw of areaKeywords) {
+        if (groupClean.includes(kw) || membersClean.includes(kw)) {
+          return { isActivated: true, matchedCard: card };
+        }
+      }
+    }
+  }
+
+  return { isActivated: false };
+}
+
 interface HariHMonitorProps {
   groups: HariHGroupDistribution[];
+  idCards?: IDCardKonsumsi[];
   onToggleStatus: (groupId: string, slot: MealTimeSlot, currentStatus: string) => void;
   onBatchCompleteSlot: (slot: MealTimeSlot) => void;
   onOpenScanner: () => void;
@@ -51,6 +120,7 @@ interface HariHMonitorProps {
 
 export const HariHMonitor: React.FC<HariHMonitorProps> = ({
   groups,
+  idCards,
   onToggleStatus,
   onBatchCompleteSlot,
   onOpenScanner,
@@ -327,6 +397,15 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
     }
   }, [groups, selectedSlot]);
 
+  // Helper to count activated groups for a slot
+  const getActivatedCountForSlot = (slotKey: MealTimeSlot) => {
+    if (!idCards || idCards.length === 0) return 0;
+    return groups.filter((g) => {
+      const slotInfo = getSlotInfo(g, slotKey);
+      return slotInfo.qty > 0 && isGroupActivatedByIdCards(g, idCards).isActivated;
+    }).length;
+  };
+
   // Breakdown by menu for the selected slot
   const menuBreakdown = useMemo(() => {
     if (selectedSlot === 'all') return [];
@@ -480,6 +559,9 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           {TIME_SLOTS.map((slot) => {
             const isSelected = selectedSlot === slot.key;
+            const isActSlot = (slot as any).isActivatedSlot;
+            const actCount = isActSlot ? getActivatedCountForSlot(slot.key as MealTimeSlot) : 0;
+
             return (
               <button
                 key={slot.key}
@@ -496,10 +578,16 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                   }`}>
                     {slot.time}
                   </span>
-                  {(slot as any).isActivatedSlot ? (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80">
-                      ✓ Sudah Aktivasi
-                    </span>
+                  {isActSlot ? (
+                    actCount > 0 ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/80">
+                        ✓ {actCount} Aktif
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                        ID Card
+                      </span>
+                    )
                   ) : (
                     slot.key !== 'all' && (
                       <span className="text-[10px] text-slate-400 font-mono">
@@ -531,12 +619,16 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Rincian Menu &amp; Porsi Pada Sesi Ini:
               </h3>
-              {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (
-                <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-bold shadow-2xs">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Sesi Ini: Sudah Aktivasi</span>
-                </span>
-              )}
+              {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (() => {
+                const count = getActivatedCountForSlot(selectedSlot as MealTimeSlot);
+                if (count === 0) return null;
+                return (
+                  <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-bold shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{count} Divisi Sudah Aktivasi ID Card</span>
+                  </span>
+                );
+              })()}
             </div>
             <div className="text-xs text-slate-600 font-medium">
               Progress Sesi: <span className="font-bold text-slate-900">{slotStats.diambil}</span> dari <span className="font-bold text-slate-900">{slotStats.total}</span> porsi ({slotStats.pct}%)
@@ -767,12 +859,19 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                           }`}>
                             {group.category}
                           </span>
-                          {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (
-                            <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>Sudah Aktivasi</span>
-                            </span>
-                          )}
+                          {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (() => {
+                            const act = isGroupActivatedByIdCards(group, idCards);
+                            if (!act.isActivated) return null;
+                            return (
+                              <span 
+                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs"
+                                title={act.matchedCard ? `Sudah diaktivasi oleh: ${act.matchedCard.holderName} (${act.matchedCard.id})` : 'Sudah Aktivasi ID Card'}
+                              >
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Sudah Aktivasi</span>
+                              </span>
+                            );
+                          })()}
                           {isTaken ? (
                             <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                               <CheckCircle2 className="w-3 h-3" />

@@ -201,9 +201,11 @@ export default function App() {
   const [digitalQrModalState, setDigitalQrModalState] = useState<{
     isOpen: boolean;
     card: IDCardKonsumsi | null;
+    isAdminView?: boolean;
   }>({
     isOpen: false,
     card: null,
+    isAdminView: false,
   });
 
   // Modal state for Printable ID Cards
@@ -582,6 +584,7 @@ export default function App() {
             setDigitalQrModalState({
               isOpen: true,
               card: matched,
+              isAdminView: false,
             });
             try {
               window.history.replaceState({}, document.title, window.location.pathname);
@@ -1403,7 +1406,7 @@ export default function App() {
             cards={INDIVIDUAL_ACCESS_CARDS}
             idCards={idCards}
             onOpenActivationModal={(card) => setActivationModalState({ isOpen: true, card: card || null })}
-            onOpenDigitalQrModal={(card) => setDigitalQrModalState({ isOpen: true, card })}
+            onOpenDigitalQrModal={(card) => setDigitalQrModalState({ isOpen: true, card, isAdminView: true })}
             onOpenPrintModal={(cardId) => setPrintCardsModalState({ isOpen: true, selectedCardId: cardId })}
             onOpenStaticQrModal={() => setIsStaticQrModalOpen(true)}
             onOpenScanner={() => setIsScannerOpen(true)}
@@ -1501,15 +1504,16 @@ export default function App() {
         onResetActivation={handleResetIdCardActivation}
         onSuccessOpenQr={(card) => {
           setActivationModalState({ isOpen: false, card: null });
-          setDigitalQrModalState({ isOpen: true, card });
+          setDigitalQrModalState({ isOpen: true, card, isAdminView: false });
         }}
       />
 
       {/* Modal QR Pengambilan Konsumsi Digital (Alternatif jika ID Card fisik hilang) */}
       <DigitalPickupQrModal
         isOpen={digitalQrModalState.isOpen}
-        onClose={() => setDigitalQrModalState({ isOpen: false, card: null })}
+        onClose={() => setDigitalQrModalState({ isOpen: false, card: null, isAdminView: false })}
         card={digitalQrModalState.card}
+        isAdminView={digitalQrModalState.isAdminView}
         onClaimMeal={handleClaimIdCardMeal}
         onResetActivation={handleResetIdCardActivation}
       />

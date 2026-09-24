@@ -22,6 +22,7 @@ interface DigitalPickupQrModalProps {
   isOpen: boolean;
   onClose: () => void;
   card: IDCardKonsumsi | null;
+  isAdminView?: boolean;
   onClaimMeal?: (cardId: string, meal: 'pagi' | 'snackPagi' | 'siang' | 'snackSiang' | 'malam') => void;
   onResetActivation?: (cardId: string) => void;
 }
@@ -30,12 +31,37 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
   isOpen,
   onClose,
   card,
+  isAdminView = false,
   onClaimMeal,
   onResetActivation,
 }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const barcodeSvgRef = useRef<SVGSVGElement | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Check if opened from smartphone / mobile device
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.innerWidth < 768 ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    );
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(
+        window.innerWidth < 768 ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      );
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Status Jatah Konsumsi dan Reset Aktivasi HANYA muncul jika diakses melalui web/admin desktop,
+  // dan TIDAK PERNAH muncul ketika scan/buka melalui HP panitia.
+  const showStatusAndReset = !isMobile && Boolean(isAdminView);
 
   useEffect(() => {
     if (isOpen && card) {
@@ -210,188 +236,190 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
             </div>
           </div>
 
-          {/* Hari H Meal Status Checklist */}
-          <div className="bg-white rounded-xl border border-slate-200 p-3 text-xs">
-            <div className="font-bold text-slate-800 mb-2 flex items-center justify-between">
-              <span className="flex items-center space-x-1.5">
-                <Utensils className="w-3.5 h-3.5 text-red-600" />
-                <span>Status Jatah Konsumsi Hari H:</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-normal">Pos Pemeriksaan</span>
+          {/* Hari H Meal Status Checklist (Hanya Tampil di Web/Admin Desktop) */}
+          {showStatusAndReset && (
+            <div className="bg-white rounded-xl border border-slate-200 p-3 text-xs">
+              <div className="font-bold text-slate-800 mb-2 flex items-center justify-between">
+                <span className="flex items-center space-x-1.5">
+                  <Utensils className="w-3.5 h-3.5 text-red-600" />
+                  <span>Status Jatah Konsumsi Hari H:</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Pos Pemeriksaan (Admin Web)</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                {/* Sarapan Pagi */}
+                <div
+                  className={`p-2 rounded-lg border ${
+                    card.claimedMeals?.pagi?.claimed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-slate-700">Sarapan Pagi</div>
+                  <div className="text-[9px] text-slate-400">06.30 WIB</div>
+                  <div className="text-xs font-bold mt-1">
+                    {card.claimedMeals?.pagi?.claimed ? (
+                      <span className="text-emerald-700">Sudah Diambil</span>
+                    ) : (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                        ✓ Sudah Aktivasi
+                      </span>
+                    )}
+                  </div>
+                  {card.claimedMeals?.pagi?.claimedAt && (
+                    <div className="text-[9px] text-emerald-700 mt-0.5">
+                      {card.claimedMeals.pagi.claimedAt}
+                    </div>
+                  )}
+                  {onClaimMeal && !card.claimedMeals?.pagi?.claimed && (
+                    <button
+                      onClick={() => onClaimMeal(card.id, 'pagi')}
+                      className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                    >
+                      Klaim Pagi
+                    </button>
+                  )}
+                </div>
+
+                {/* Snack Pagi */}
+                <div
+                  className={`p-2 rounded-lg border ${
+                    card.claimedMeals?.snackPagi?.claimed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-slate-700">Snack Pagi</div>
+                  <div className="text-[9px] text-slate-400">09.30 WIB</div>
+                  <div className="text-xs font-bold mt-1">
+                    {card.claimedMeals?.snackPagi?.claimed ? (
+                      <span className="text-emerald-700">Sudah Diambil</span>
+                    ) : (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                        ✓ Sudah Aktivasi
+                      </span>
+                    )}
+                  </div>
+                  {card.claimedMeals?.snackPagi?.claimedAt && (
+                    <div className="text-[9px] text-emerald-700 mt-0.5">
+                      {card.claimedMeals.snackPagi.claimedAt}
+                    </div>
+                  )}
+                  {onClaimMeal && !card.claimedMeals?.snackPagi?.claimed && (
+                    <button
+                      onClick={() => onClaimMeal(card.id, 'snackPagi')}
+                      className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                    >
+                      Klaim Snack
+                    </button>
+                  )}
+                </div>
+
+                {/* Makan Siang */}
+                <div
+                  className={`p-2 rounded-lg border ${
+                    card.claimedMeals?.siang?.claimed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-slate-700">Makan Siang</div>
+                  <div className="text-[9px] text-slate-400">11.30 WIB</div>
+                  <div className="text-xs font-bold mt-1">
+                    {card.claimedMeals?.siang?.claimed ? (
+                      <span className="text-emerald-700">Sudah Diambil</span>
+                    ) : (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                        ✓ Sudah Aktivasi
+                      </span>
+                    )}
+                  </div>
+                  {card.claimedMeals?.siang?.claimedAt && (
+                    <div className="text-[9px] text-emerald-700 mt-0.5">
+                      {card.claimedMeals.siang.claimedAt}
+                    </div>
+                  )}
+                  {onClaimMeal && !card.claimedMeals?.siang?.claimed && (
+                    <button
+                      onClick={() => onClaimMeal(card.id, 'siang')}
+                      className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                    >
+                      Klaim Siang
+                    </button>
+                  )}
+                </div>
+
+                {/* Snack Sore */}
+                <div
+                  className={`p-2 rounded-lg border ${
+                    card.claimedMeals?.snackSiang?.claimed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-slate-700">Snack Sore</div>
+                  <div className="text-[9px] text-slate-400">15.00 WIB</div>
+                  <div className="text-xs font-bold mt-1">
+                    {card.claimedMeals?.snackSiang?.claimed ? (
+                      <span className="text-emerald-700">Sudah Diambil</span>
+                    ) : (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                        ✓ Sudah Aktivasi
+                      </span>
+                    )}
+                  </div>
+                  {card.claimedMeals?.snackSiang?.claimedAt && (
+                    <div className="text-[9px] text-emerald-700 mt-0.5">
+                      {card.claimedMeals.snackSiang.claimedAt}
+                    </div>
+                  )}
+                  {onClaimMeal && !card.claimedMeals?.snackSiang?.claimed && (
+                    <button
+                      onClick={() => onClaimMeal(card.id, 'snackSiang')}
+                      className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                    >
+                      Klaim Snack
+                    </button>
+                  )}
+                </div>
+
+                {/* Makan Malam */}
+                <div
+                  className={`p-2 rounded-lg border ${
+                    card.claimedMeals?.malam?.claimed
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-slate-700">Makan Malam</div>
+                  <div className="text-[9px] text-slate-400">17.30 WIB</div>
+                  <div className="text-xs font-bold mt-1">
+                    {card.claimedMeals?.malam?.claimed ? (
+                      <span className="text-emerald-700">Sudah Diambil</span>
+                    ) : (
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                        ✓ Sudah Aktivasi
+                      </span>
+                    )}
+                  </div>
+                  {card.claimedMeals?.malam?.claimedAt && (
+                    <div className="text-[9px] text-emerald-700 mt-0.5">
+                      {card.claimedMeals.malam.claimedAt}
+                    </div>
+                  )}
+                  {onClaimMeal && !card.claimedMeals?.malam?.claimed && (
+                    <button
+                      onClick={() => onClaimMeal(card.id, 'malam')}
+                      className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                    >
+                      Klaim Malam
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
-              {/* Sarapan Pagi */}
-              <div
-                className={`p-2 rounded-lg border ${
-                  card.claimedMeals?.pagi?.claimed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
-                }`}
-              >
-                <div className="text-[10px] font-bold text-slate-700">Sarapan Pagi</div>
-                <div className="text-[9px] text-slate-400">06.30 WIB</div>
-                <div className="text-xs font-bold mt-1">
-                  {card.claimedMeals?.pagi?.claimed ? (
-                    <span className="text-emerald-700">Sudah Diambil</span>
-                  ) : (
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
-                      ✓ Sudah Aktivasi
-                    </span>
-                  )}
-                </div>
-                {card.claimedMeals?.pagi?.claimedAt && (
-                  <div className="text-[9px] text-emerald-700 mt-0.5">
-                    {card.claimedMeals.pagi.claimedAt}
-                  </div>
-                )}
-                {onClaimMeal && !card.claimedMeals?.pagi?.claimed && (
-                  <button
-                    onClick={() => onClaimMeal(card.id, 'pagi')}
-                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
-                  >
-                    Klaim Pagi
-                  </button>
-                )}
-              </div>
-
-              {/* Snack Pagi */}
-              <div
-                className={`p-2 rounded-lg border ${
-                  card.claimedMeals?.snackPagi?.claimed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
-                }`}
-              >
-                <div className="text-[10px] font-bold text-slate-700">Snack Pagi</div>
-                <div className="text-[9px] text-slate-400">09.30 WIB</div>
-                <div className="text-xs font-bold mt-1">
-                  {card.claimedMeals?.snackPagi?.claimed ? (
-                    <span className="text-emerald-700">Sudah Diambil</span>
-                  ) : (
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
-                      ✓ Sudah Aktivasi
-                    </span>
-                  )}
-                </div>
-                {card.claimedMeals?.snackPagi?.claimedAt && (
-                  <div className="text-[9px] text-emerald-700 mt-0.5">
-                    {card.claimedMeals.snackPagi.claimedAt}
-                  </div>
-                )}
-                {onClaimMeal && !card.claimedMeals?.snackPagi?.claimed && (
-                  <button
-                    onClick={() => onClaimMeal(card.id, 'snackPagi')}
-                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
-                  >
-                    Klaim Snack
-                  </button>
-                )}
-              </div>
-
-              {/* Makan Siang */}
-              <div
-                className={`p-2 rounded-lg border ${
-                  card.claimedMeals?.siang?.claimed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
-                }`}
-              >
-                <div className="text-[10px] font-bold text-slate-700">Makan Siang</div>
-                <div className="text-[9px] text-slate-400">11.30 WIB</div>
-                <div className="text-xs font-bold mt-1">
-                  {card.claimedMeals?.siang?.claimed ? (
-                    <span className="text-emerald-700">Sudah Diambil</span>
-                  ) : (
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
-                      ✓ Sudah Aktivasi
-                    </span>
-                  )}
-                </div>
-                {card.claimedMeals?.siang?.claimedAt && (
-                  <div className="text-[9px] text-emerald-700 mt-0.5">
-                    {card.claimedMeals.siang.claimedAt}
-                  </div>
-                )}
-                {onClaimMeal && !card.claimedMeals?.siang?.claimed && (
-                  <button
-                    onClick={() => onClaimMeal(card.id, 'siang')}
-                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
-                  >
-                    Klaim Siang
-                  </button>
-                )}
-              </div>
-
-              {/* Snack Sore */}
-              <div
-                className={`p-2 rounded-lg border ${
-                  card.claimedMeals?.snackSiang?.claimed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
-                }`}
-              >
-                <div className="text-[10px] font-bold text-slate-700">Snack Sore</div>
-                <div className="text-[9px] text-slate-400">15.00 WIB</div>
-                <div className="text-xs font-bold mt-1">
-                  {card.claimedMeals?.snackSiang?.claimed ? (
-                    <span className="text-emerald-700">Sudah Diambil</span>
-                  ) : (
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
-                      ✓ Sudah Aktivasi
-                    </span>
-                  )}
-                </div>
-                {card.claimedMeals?.snackSiang?.claimedAt && (
-                  <div className="text-[9px] text-emerald-700 mt-0.5">
-                    {card.claimedMeals.snackSiang.claimedAt}
-                  </div>
-                )}
-                {onClaimMeal && !card.claimedMeals?.snackSiang?.claimed && (
-                  <button
-                    onClick={() => onClaimMeal(card.id, 'snackSiang')}
-                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
-                  >
-                    Klaim Snack
-                  </button>
-                )}
-              </div>
-
-              {/* Makan Malam */}
-              <div
-                className={`p-2 rounded-lg border ${
-                  card.claimedMeals?.malam?.claimed
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
-                }`}
-              >
-                <div className="text-[10px] font-bold text-slate-700">Makan Malam</div>
-                <div className="text-[9px] text-slate-400">17.30 WIB</div>
-                <div className="text-xs font-bold mt-1">
-                  {card.claimedMeals?.malam?.claimed ? (
-                    <span className="text-emerald-700">Sudah Diambil</span>
-                  ) : (
-                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
-                      ✓ Sudah Aktivasi
-                    </span>
-                  )}
-                </div>
-                {card.claimedMeals?.malam?.claimedAt && (
-                  <div className="text-[9px] text-emerald-700 mt-0.5">
-                    {card.claimedMeals.malam.claimedAt}
-                  </div>
-                )}
-                {onClaimMeal && !card.claimedMeals?.malam?.claimed && (
-                  <button
-                    onClick={() => onClaimMeal(card.id, 'malam')}
-                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
-                  >
-                    Klaim Malam
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Footer Actions */}
@@ -421,7 +449,7 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
               <span>Cetak</span>
             </button>
 
-            {onResetActivation && (
+            {showStatusAndReset && onResetActivation && (
               <button
                 onClick={() => {
                   const confirmed = window.confirm(
@@ -434,7 +462,7 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
                   }
                 }}
                 className="inline-flex items-center space-x-1 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-semibold shadow-2xs transition-colors"
-                title="Batalkan aktivasi kartu ini"
+                title="Batalkan aktivasi kartu ini (Hanya Admin)"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
                 <span>Reset Aktivasi</span>

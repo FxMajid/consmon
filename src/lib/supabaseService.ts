@@ -276,18 +276,16 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
       // Extract members, clean notes, and any H1 backup from notes
       const { membersVal, notesVal, h1Data } = extractGroupNotesAndMembers(r.notes, r.members);
 
-      // Determine H-1 Siang values (prefer positive column, fallback to notes backup, fallback to defaults)
+      // Determine H-1 Siang values (honor exact column value even if 0, fallback to notes backup, fallback to defaults only if uninitialized)
       let h1SiangQty = 0;
-      if (r.h1_siang_qty !== undefined && r.h1_siang_qty !== null && Number(r.h1_siang_qty) > 0) {
+      if (r.h1_siang_qty !== undefined && r.h1_siang_qty !== null) {
         h1SiangQty = Number(r.h1_siang_qty);
-      } else if (h1Data?.sq !== undefined && Number(h1Data.sq) > 0) {
+      } else if (h1Data?.sq !== undefined && h1Data?.sq !== null) {
         h1SiangQty = Number(h1Data.sq);
       } else if (r.no <= 14) {
-        h1SiangQty = r.siang_qty || 2;
+        h1SiangQty = r.siang_qty !== undefined ? r.siang_qty : 2;
       } else if (r.no === 64) {
         h1SiangQty = 5;
-      } else if (r.h1_siang_qty !== undefined && r.h1_siang_qty !== null) {
-        h1SiangQty = Number(r.h1_siang_qty);
       }
       
       const h1SiangMenu = r.h1_siang_menu || h1Data?.sm || 'Nasi Ladas';
@@ -295,18 +293,16 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
       const h1SiangPickedAt = r.h1_siang_picked_at || h1Data?.sp || undefined;
       const h1SiangReceiver = r.h1_siang_receiver || h1Data?.sr || undefined;
 
-      // Determine H-1 Malam values
+      // Determine H-1 Malam values (honor exact column value even if 0, fallback to notes backup, fallback to defaults only if uninitialized)
       let h1MalamQty = 0;
-      if (r.h1_malam_qty !== undefined && r.h1_malam_qty !== null && Number(r.h1_malam_qty) > 0) {
+      if (r.h1_malam_qty !== undefined && r.h1_malam_qty !== null) {
         h1MalamQty = Number(r.h1_malam_qty);
-      } else if (h1Data?.mq !== undefined && Number(h1Data.mq) > 0) {
+      } else if (h1Data?.mq !== undefined && h1Data?.mq !== null) {
         h1MalamQty = Number(h1Data.mq);
       } else if (r.no <= 14) {
-        h1MalamQty = r.malam_qty || 2;
+        h1MalamQty = r.malam_qty !== undefined ? r.malam_qty : 2;
       } else if (r.no === 64) {
         h1MalamQty = 10;
-      } else if (r.h1_malam_qty !== undefined && r.h1_malam_qty !== null) {
-        h1MalamQty = Number(r.h1_malam_qty);
       }
 
       const h1MalamMenu = r.h1_malam_menu || h1Data?.mm || 'Nasi Padang Puti Minang';

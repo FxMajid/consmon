@@ -181,16 +181,16 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
   const handleOpenHariHEdit = (group: HariHGroupDistribution) => {
     let defaultH1Siang = group.h1SiangQty;
     let defaultH1Malam = group.h1MalamQty;
-    if (group.no <= 14 && (defaultH1Siang === undefined || defaultH1Siang === 0)) {
-      defaultH1Siang = group.siangQty || 2;
+    if (group.no <= 14 && defaultH1Siang === undefined) {
+      defaultH1Siang = group.siangQty !== undefined ? group.siangQty : 2;
     }
-    if (group.no <= 14 && (defaultH1Malam === undefined || defaultH1Malam === 0)) {
-      defaultH1Malam = group.malamQty || 2;
+    if (group.no <= 14 && defaultH1Malam === undefined) {
+      defaultH1Malam = group.malamQty !== undefined ? group.malamQty : 2;
     }
-    if (group.no === 64 && (defaultH1Siang === undefined || defaultH1Siang === 0)) {
+    if (group.no === 64 && defaultH1Siang === undefined) {
       defaultH1Siang = 5;
     }
-    if (group.no === 64 && (defaultH1Malam === undefined || defaultH1Malam === 0)) {
+    if (group.no === 64 && defaultH1Malam === undefined) {
       defaultH1Malam = 10;
     }
 
@@ -1873,10 +1873,9 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                   <label className="block font-semibold text-slate-700 mb-1">Kuota Porsi</label>
                   <input
                     type="number"
-                    min="1"
-                    required
+                    min="0"
                     value={editingVoucher.qty}
-                    onChange={(e) => setEditingVoucher({ ...editingVoucher, qty: parseInt(e.target.value) || 1 })}
+                    onChange={(e) => setEditingVoucher({ ...editingVoucher, qty: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 font-bold text-center"
                   />
                 </div>

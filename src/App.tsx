@@ -1152,7 +1152,12 @@ export default function App() {
 
     if (isSupabaseConfigured()) {
       const res = await upsertHariHToSupabase(group);
-      return res.success;
+      if (!res.success) {
+        console.warn('[Supabase] Warning saving group to cloud:', res.error);
+        // Note: local state is preserved; return false only if critical
+        return false;
+      }
+      return true;
     }
     return true;
   };

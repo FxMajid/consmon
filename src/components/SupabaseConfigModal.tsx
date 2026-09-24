@@ -48,6 +48,7 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({
   vouchers = [],
 }) => {
   const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedH1Sql, setCopiedH1Sql] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
@@ -96,6 +97,32 @@ export const SupabaseConfigModal: React.FC<SupabaseConfigModalProps> = ({
     }
   };
 
+  const handleCopyH1MigrationSql = () => {
+    const h1Sql = `-- ==============================================================================
+-- SQL MIGRASI KOLOM H-1 (Non-Voucher / Distribusi Langsung)
+-- Jalankan query ini di Supabase SQL Editor Anda:
+-- ==============================================================================
+
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_menu TEXT DEFAULT 'Nasi Ladas';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_receiver TEXT;
+
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_menu TEXT DEFAULT 'Nasi Padang Puti Minang';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_receiver TEXT;
+
+-- Refresh cache & pastikan izin role anon
+GRANT ALL ON TABLE public.hari_h_distributions TO anon, authenticated;
+`;
+    navigator.clipboard.writeText(h1Sql);
+    setCopiedH1Sql(true);
+    setTimeout(() => setCopiedH1Sql(false), 2500);
+  };
+
   const handleCopySql = () => {
     const sqlContent = `-- ==============================================================================
 -- SUPABASE DATABASE SCHEMA: SISTEM DISTRIBUSI KONSUMSI HBD
@@ -129,21 +156,49 @@ CREATE TABLE IF NOT EXISTS public.hari_h_distributions (
     group_name TEXT NOT NULL,
     pic_name TEXT NOT NULL,
     pic_phone TEXT,
+    category TEXT DEFAULT 'Internal',
+    h1_siang_qty INTEGER DEFAULT 0,
+    h1_siang_menu TEXT DEFAULT 'Nasi Ladas',
+    h1_siang_status TEXT DEFAULT 'pending',
+    h1_siang_picked_at TEXT,
+    h1_siang_receiver TEXT,
+    h1_malam_qty INTEGER DEFAULT 0,
+    h1_malam_menu TEXT DEFAULT 'Nasi Padang Puti Minang',
+    h1_malam_status TEXT DEFAULT 'pending',
+    h1_malam_picked_at TEXT,
+    h1_malam_receiver TEXT,
     pagi_qty INTEGER DEFAULT 0,
     pagi_menu TEXT DEFAULT '',
     pagi_status TEXT DEFAULT 'pending',
     pagi_picked_at TEXT,
     pagi_receiver TEXT,
+    snack_pagi_qty INTEGER DEFAULT 0,
+    snack_pagi_menu TEXT DEFAULT '',
+    snack_pagi_status TEXT DEFAULT 'pending',
+    snack_pagi_picked_at TEXT,
+    snack_pagi_receiver TEXT,
     siang_qty INTEGER DEFAULT 0,
     siang_menu TEXT DEFAULT '',
     siang_status TEXT DEFAULT 'pending',
     siang_picked_at TEXT,
     siang_receiver TEXT,
+    snack_siang_qty INTEGER DEFAULT 0,
+    snack_siang_menu TEXT DEFAULT '',
+    snack_siang_status TEXT DEFAULT 'pending',
+    snack_siang_picked_at TEXT,
+    snack_siang_receiver TEXT,
+    minuman_qty INTEGER DEFAULT 0,
+    minuman_menu TEXT DEFAULT '',
+    minuman_status TEXT DEFAULT 'pending',
+    minuman_picked_at TEXT,
+    minuman_receiver TEXT,
     malam_qty INTEGER DEFAULT 0,
     malam_menu TEXT DEFAULT '',
     malam_status TEXT DEFAULT 'pending',
     malam_picked_at TEXT,
     malam_receiver TEXT,
+    notes TEXT,
+    total_amount INTEGER DEFAULT 0,
     updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -173,6 +228,17 @@ ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS meal_type TEXT DEFAULT 'Mak
 ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS unit_price INTEGER DEFAULT 0;
 ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS total_price INTEGER DEFAULT 0;
 ALTER TABLE public.vouchers ADD COLUMN IF NOT EXISTS notes TEXT;
+
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_menu TEXT DEFAULT 'Nasi Ladas';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_siang_receiver TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_qty INTEGER DEFAULT 0;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_menu TEXT DEFAULT 'Nasi Padang Puti Minang';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_status TEXT DEFAULT 'pending';
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_picked_at TEXT;
+ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_receiver TEXT;
 
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_qty INTEGER DEFAULT 0;
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS snack_pagi_menu TEXT DEFAULT '';
@@ -421,6 +487,35 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.vouchers;`;
               <li>Tambahkan variabel: <code className="bg-white px-1.5 py-0.5 rounded border border-blue-200 font-mono text-[10px]">VITE_SUPABASE_ANON_KEY</code> = (Anon Key Supabase Anda)</li>
               <li>Buka tab <strong>Deployments</strong> di Vercel, lalu klik menu titik tiga (&bull;&bull;&bull;) &rarr; <strong>Redeploy</strong> agar variabel dimasukkan ke build Vite.</li>
             </ol>
+          </div>
+
+          {/* Quick H-1 Migration Card */}
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-4 text-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-red-950 flex items-center space-x-1.5">
+                <Code2 className="w-4 h-4 text-red-600" />
+                <span>⚡ Migrasi Database: Tambah Kolom H-1 (Non-Voucher)</span>
+              </div>
+              <button
+                onClick={handleCopyH1MigrationSql}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold shadow-xs transition-colors"
+              >
+                {copiedH1Sql ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Salin SQL Kolom H-1</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-[11px] text-red-900 leading-relaxed">
+              Jika tabel <code className="font-semibold text-red-950">hari_h_distributions</code> di database Supabase Anda sudah dibuat sebelumnya, jalankan query singkat ini di <strong>Supabase SQL Editor</strong> untuk menambahkan kolom <code className="bg-white/80 px-1 py-0.5 rounded border border-red-200 font-mono text-[10px]">h1_siang_*</code> dan <code className="bg-white/80 px-1 py-0.5 rounded border border-red-200 font-mono text-[10px]">h1_malam_*</code> agar sinkronisasi penuh di cloud.
+            </p>
           </div>
 
           {/* Schema SQL Section */}

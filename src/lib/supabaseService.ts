@@ -138,6 +138,112 @@ export async function deleteIdCardFromSupabase(id: string): Promise<boolean> {
 // 2. HARI H DISTRIBUTIONS SYNCHRONIZATION
 // ==========================================
 
+// Helper to extract and format notes, members, and H-1 backup
+function extractGroupNotesAndMembers(notesRaw?: string | null, membersRaw?: string | null) {
+  let membersVal = membersRaw || undefined;
+  let notesVal = notesRaw || undefined;
+
+  let h1Data: {
+    sq?: number; sm?: string; ss?: string; sp?: string; sr?: string;
+    mq?: number; mm?: string; ms?: string; mp?: string; mr?: string;
+  } | null = null;
+
+  if (notesVal && typeof notesVal === 'string') {
+    // 1. Extract [H1_DATA:...]
+    const h1Match = notesVal.match(/\[H1_DATA:([^\]]+)\]/);
+    if (h1Match && h1Match[1]) {
+      try {
+        h1Data = JSON.parse(h1Match[1]);
+      } catch (e) {
+        // ignore json parse error
+      }
+      notesVal = notesVal.replace(/\[H1_DATA:[^\]]+\]/g, '').trim();
+    }
+
+    // 2. Extract Anggota: ...
+    if (notesVal.toLowerCase().includes('anggota:')) {
+      const match = notesVal.match(/Anggota:\s*([^|]+)/i);
+      if (match && match[1] && !membersVal) {
+        membersVal = match[1].trim();
+      }
+      notesVal = notesVal.replace(/Anggota:\s*[^|]+/i, '').trim();
+    }
+
+    // Clean up lingering separators
+    notesVal = notesVal.replace(/^[|\s]+|[|\s]+$/g, '').trim() || undefined;
+  }
+
+  return { membersVal, notesVal, h1Data };
+}
+
+function buildComputedGroupNotes(group: HariHGroupDistribution): string | null {
+  const parts: string[] = [];
+  
+  // Clean base note
+  if (group.notes && group.notes.trim()) {
+    let clean = group.notes
+      .replace(/\[H1_DATA:[^\]]+\]/g, '')
+      .replace(/Anggota:\s*[^|]+/i, '')
+      .replace(/^[|\s]+|[|\s]+$/g, '')
+      .trim();
+    if (clean) parts.push(clean);
+  }
+
+  // Add members
+  if (group.members && group.members.trim()) {
+    parts.push(`Anggota: ${group.members.trim()}`);
+  }
+
+  // Backup H-1 data inside notes for legacy database schemas
+  const h1Backup = {
+    sq: group.h1SiangQty || 0,
+    sm: group.h1SiangMenu || 'Nasi Ladas',
+    ss: group.h1SiangStatus || 'pending',
+    sp: group.h1SiangPickedAt || '',
+    sr: group.h1SiangReceiver || '',
+    mq: group.h1MalamQty || 0,
+    mm: group.h1MalamMenu || 'Nasi Padang Puti Minang',
+    ms: group.h1MalamStatus || 'pending',
+    mp: group.h1MalamPickedAt || '',
+    mr: group.h1MalamReceiver || '',
+  };
+  parts.push(`[H1_DATA:${JSON.stringify(h1Backup)}]`);
+
+  return parts.length > 0 ? parts.join(' | ') : null;
+}
+
+const H1_COLUMNS = [
+  'h1_siang_qty', 'h1_siang_menu', 'h1_siang_status', 'h1_siang_picked_at', 'h1_siang_receiver',
+  'h1_malam_qty', 'h1_malam_menu', 'h1_malam_status', 'h1_malam_picked_at', 'h1_malam_receiver'
+];
+
+function stripH1AndOptionalColumns(payload: Record<string, any>, stripAllOptional = false): Record<string, any> {
+  const clean = { ...payload };
+  delete clean.members;
+  H1_COLUMNS.forEach((col) => delete clean[col]);
+  
+  if (stripAllOptional) {
+    delete clean.category;
+    delete clean.total_amount;
+    delete clean.snack_pagi_qty;
+    delete clean.snack_pagi_menu;
+    delete clean.snack_pagi_status;
+    delete clean.snack_pagi_picked_at;
+    delete clean.snack_pagi_receiver;
+    delete clean.snack_siang_qty;
+    delete clean.snack_siang_menu;
+    delete clean.snack_siang_status;
+    delete clean.snack_siang_picked_at;
+    delete clean.snack_siang_receiver;
+    delete clean.minuman_qty;
+    delete clean.minuman_menu;
+    delete clean.minuman_status;
+    delete clean.minuman_picked_at;
+    delete clean.minuman_receiver;
+  }
+  return clean;
+}
+
 export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[] | null> {
   const client = getSupabase();
   if (!client) return null;
@@ -156,7 +262,6 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
     if (!data || data.length === 0) return [];
 
     return data.map((r: any) => {
-      // Correctly determine category: No 40 to 63 are Eksternal, 64 is Buffer, 1 to 39 are Internal
       let cat: 'Internal' | 'Eksternal' | 'Buffer' = 'Internal';
       if (r.category === 'Eksternal' || r.category === 'Buffer') {
         cat = r.category;
@@ -168,16 +273,28 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         cat = 'Internal';
       }
 
-      // Extract members and cleaned notes
-      let membersVal = r.members;
-      let notesVal = r.notes;
-      if (!membersVal && notesVal && typeof notesVal === 'string' && notesVal.toLowerCase().includes('anggota:')) {
-        const match = notesVal.match(/Anggota:\s*([^|]+)/i);
-        if (match && match[1]) {
-          membersVal = match[1].trim();
-          notesVal = notesVal.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() || undefined;
-        }
-      }
+      // Extract members, clean notes, and any H1 backup from notes
+      const { membersVal, notesVal, h1Data } = extractGroupNotesAndMembers(r.notes, r.members);
+
+      // Determine H-1 Siang values (prefer column, fallback to notes backup, fallback to defaults)
+      const h1SiangQty = r.h1_siang_qty !== undefined && r.h1_siang_qty !== null
+        ? r.h1_siang_qty
+        : (h1Data?.sq !== undefined ? h1Data.sq : (r.no <= 14 ? (r.siang_qty || 2) : (r.no === 64 ? 5 : 0)));
+      
+      const h1SiangMenu = r.h1_siang_menu || h1Data?.sm || 'Nasi Ladas';
+      const h1SiangStatus = (r.h1_siang_status || h1Data?.ss || 'pending') as 'pending' | 'completed';
+      const h1SiangPickedAt = r.h1_siang_picked_at || h1Data?.sp || undefined;
+      const h1SiangReceiver = r.h1_siang_receiver || h1Data?.sr || undefined;
+
+      // Determine H-1 Malam values
+      const h1MalamQty = r.h1_malam_qty !== undefined && r.h1_malam_qty !== null
+        ? r.h1_malam_qty
+        : (h1Data?.mq !== undefined ? h1Data.mq : (r.no <= 14 ? (r.malam_qty || 2) : (r.no === 64 ? 10 : 0)));
+
+      const h1MalamMenu = r.h1_malam_menu || h1Data?.mm || 'Nasi Padang Puti Minang';
+      const h1MalamStatus = (r.h1_malam_status || h1Data?.ms || 'pending') as 'pending' | 'completed';
+      const h1MalamPickedAt = r.h1_malam_picked_at || h1Data?.mp || undefined;
+      const h1MalamReceiver = r.h1_malam_receiver || h1Data?.mr || undefined;
 
       return {
         id: r.id,
@@ -186,16 +303,16 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         picName: r.pic_name,
         picPhone: r.pic_phone || '',
         category: cat,
-        h1SiangQty: r.h1_siang_qty || (r.no <= 14 ? (r.siang_qty || 2) : (r.no === 64 ? 5 : 0)),
-        h1SiangMenu: r.h1_siang_menu || 'Nasi Ladas',
-        h1SiangStatus: r.h1_siang_status || 'pending',
-        h1SiangPickedAt: r.h1_siang_picked_at || undefined,
-        h1SiangReceiver: r.h1_siang_receiver || undefined,
-        h1MalamQty: r.h1_malam_qty || (r.no <= 14 ? (r.malam_qty || 2) : (r.no === 64 ? 10 : 0)),
-        h1MalamMenu: r.h1_malam_menu || 'Nasi Padang Puti Minang',
-        h1MalamStatus: r.h1_malam_status || 'pending',
-        h1MalamPickedAt: r.h1_malam_picked_at || undefined,
-        h1MalamReceiver: r.h1_malam_receiver || undefined,
+        h1SiangQty: Number(h1SiangQty) || 0,
+        h1SiangMenu: h1SiangMenu,
+        h1SiangStatus: h1SiangStatus,
+        h1SiangPickedAt: h1SiangPickedAt,
+        h1SiangReceiver: h1SiangReceiver,
+        h1MalamQty: Number(h1MalamQty) || 0,
+        h1MalamMenu: h1MalamMenu,
+        h1MalamStatus: h1MalamStatus,
+        h1MalamPickedAt: h1MalamPickedAt,
+        h1MalamReceiver: h1MalamReceiver,
         pagiQty: r.pagi_qty || 0,
         pagiMenu: r.pagi_menu || '',
         pagiStatus: r.pagi_status || 'pending',
@@ -299,12 +416,61 @@ export async function updateHariHSlotInSupabase(
       .eq('id', groupId)
       .select('id');
 
-    // If failed because column does not exist in schema cache, omit optional fields and retry
-    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      delete updateData.notes;
+    // If failed because column does not exist (e.g. h1_siang_status or notes missing in older schemas)
+    if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
+      console.warn(`[Supabase] Column error updating slot ${slot}:`, error.message, 'Trying fallback without newly added slot columns...');
+      
+      // If it failed because H-1 column doesn't exist yet, we save H-1 status inside notes
+      if (slot === 'h1_siang' || slot === 'h1_malam') {
+        try {
+          const { data: currentGroup } = await client
+            .from('hari_h_distributions')
+            .select('notes')
+            .eq('id', groupId)
+            .maybeSingle();
+
+          const { membersVal, notesVal, h1Data } = extractGroupNotesAndMembers(currentGroup?.notes);
+          const currentH1 = h1Data || {};
+          if (slot === 'h1_siang') {
+            currentH1.ss = status;
+            currentH1.sp = status === 'completed' ? (pickedAt || '') : '';
+            currentH1.sr = status === 'completed' ? (receiver || '') : '';
+          } else {
+            currentH1.ms = status;
+            currentH1.mp = status === 'completed' ? (pickedAt || '') : '';
+            currentH1.mr = status === 'completed' ? (receiver || '') : '';
+          }
+
+          const fallbackNotesParts: string[] = [];
+          if (notesVal) fallbackNotesParts.push(notesVal);
+          if (membersVal) fallbackNotesParts.push(`Anggota: ${membersVal}`);
+          fallbackNotesParts.push(`[H1_DATA:${JSON.stringify(currentH1)}]`);
+          if (note) fallbackNotesParts.push(note);
+
+          const fallbackUpdate = await client
+            .from('hari_h_distributions')
+            .update({
+              notes: fallbackNotesParts.join(' | '),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', groupId)
+            .select('id');
+
+          if (!fallbackUpdate.error) {
+            console.log(`[Supabase] H-1 slot ${slot} successfully persisted into notes backup`);
+            return { success: true };
+          }
+        } catch (fbErr) {
+          console.warn('[Supabase] Fallback note update failed:', fbErr);
+        }
+      }
+
+      // Retry without notes if note was the issue
+      const retryData = { ...updateData };
+      delete retryData.notes;
       const retry = await client
         .from('hari_h_distributions')
-        .update(updateData)
+        .update(retryData)
         .eq('id', groupId)
         .select('id');
       error = retry.error;
@@ -378,15 +544,7 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
 
   try {
     const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
-    
-    // Construct robust note with encoded members as backup
-    let computedNotes = group.notes || null;
-    if (group.members && group.members.trim()) {
-      const cleanNote = group.notes ? group.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
-      computedNotes = cleanNote ? `${cleanNote} | Anggota: ${group.members.trim()}` : `Anggota: ${group.members.trim()}`;
-    } else if (computedNotes) {
-      computedNotes = computedNotes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() || null;
-    }
+    const computedNotes = buildComputedGroupNotes(group);
 
     const payload: Record<string, any> = {
       id: group.id,
@@ -396,12 +554,12 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       pic_phone: group.picPhone || null,
       category: category,
       h1_siang_qty: group.h1SiangQty || 0,
-      h1_siang_menu: group.h1SiangMenu || '',
+      h1_siang_menu: group.h1SiangMenu || 'Nasi Ladas',
       h1_siang_status: group.h1SiangStatus || 'pending',
       h1_siang_picked_at: group.h1SiangPickedAt || null,
       h1_siang_receiver: group.h1SiangReceiver || null,
       h1_malam_qty: group.h1MalamQty || 0,
-      h1_malam_menu: group.h1MalamMenu || '',
+      h1_malam_menu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
       h1_malam_status: group.h1MalamStatus || 'pending',
       h1_malam_picked_at: group.h1MalamPickedAt || null,
       h1_malam_receiver: group.h1MalamReceiver || null,
@@ -440,20 +598,31 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       updated_at: new Date().toISOString(),
     };
 
-    // First try UPDATE to avoid RLS INSERT restrictions if row exists
+    // 1. First attempt: Standard UPDATE with full payload
     let { error } = await client
       .from('hari_h_distributions')
       .update(payload)
       .eq('id', group.id);
 
-    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.members;
+    // If update failed due to missing columns in user's schema (e.g. h1_siang_* or members)
+    if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
+      console.warn('[Supabase] Missing column detected during Hari H update:', error.message, 'Trying fallback without new columns (data preserved in notes)...');
+      const fallbackPayload = stripH1AndOptionalColumns(payload, false);
       const retryUpdate = await client
         .from('hari_h_distributions')
         .update(fallbackPayload)
         .eq('id', group.id);
       error = retryUpdate.error;
+
+      // If still error, strip older optional columns
+      if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
+        const ultraFallback = stripH1AndOptionalColumns(payload, true);
+        const retryUltra = await client
+          .from('hari_h_distributions')
+          .update(ultraFallback)
+          .eq('id', group.id);
+        error = retryUltra.error;
+      }
     }
 
     // If update succeeded, return true
@@ -462,12 +631,17 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       return { success: true };
     }
 
-    // If update failed, try upsert
+    // 2. If update failed (e.g. new record), try UPSERT
     let upsertRes = await client.from('hari_h_distributions').upsert(payload);
-    if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache'))) {
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.members;
+    if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache') || upsertRes.error.message.includes('does not exist'))) {
+      console.warn('[Supabase] Missing column detected during Hari H upsert, retrying with fallback payload...');
+      const fallbackPayload = stripH1AndOptionalColumns(payload, false);
       upsertRes = await client.from('hari_h_distributions').upsert(fallbackPayload);
+      
+      if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache') || upsertRes.error.message.includes('does not exist'))) {
+        const ultraFallback = stripH1AndOptionalColumns(payload, true);
+        upsertRes = await client.from('hari_h_distributions').upsert(ultraFallback);
+      }
     }
 
     if (upsertRes.error) {
@@ -506,11 +680,7 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
   try {
     const payloads = groups.map((group) => {
       const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
-      let computedNotes = group.notes || null;
-      if (group.members && group.members.trim()) {
-        const cleanNote = group.notes ? group.notes.replace(/Anggota:\s*[^|]+/i, '').replace(/\|\s*$/, '').replace(/^\s*\|\s*/, '').trim() : '';
-        computedNotes = cleanNote ? `${cleanNote} | Anggota: ${group.members.trim()}` : `Anggota: ${group.members.trim()}`;
-      }
+      const computedNotes = buildComputedGroupNotes(group);
       return {
         id: group.id,
         no: group.no,
@@ -519,12 +689,12 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
         pic_phone: group.picPhone || null,
         category: category,
         h1_siang_qty: group.h1SiangQty || 0,
-        h1_siang_menu: group.h1SiangMenu || '',
+        h1_siang_menu: group.h1SiangMenu || 'Nasi Ladas',
         h1_siang_status: group.h1SiangStatus || 'pending',
         h1_siang_picked_at: group.h1SiangPickedAt || null,
         h1_siang_receiver: group.h1SiangReceiver || null,
         h1_malam_qty: group.h1MalamQty || 0,
-        h1_malam_menu: group.h1MalamMenu || '',
+        h1_malam_menu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
         h1_malam_status: group.h1MalamStatus || 'pending',
         h1_malam_picked_at: group.h1MalamPickedAt || null,
         h1_malam_receiver: group.h1MalamReceiver || null,
@@ -565,14 +735,16 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
     });
 
     let { error } = await client.from('hari_h_distributions').upsert(payloads);
-    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
-      const fallbackPayloads = payloads.map((p) => {
-        const { members: _discarded, ...rest } = p;
-        return rest;
-      });
+    if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
+      console.warn('[Supabase] Missing column during bulk upsert Hari H, using fallback payloads...');
+      const fallbackPayloads = payloads.map((p) => stripH1AndOptionalColumns(p, false));
       const retry = await client.from('hari_h_distributions').upsert(fallbackPayloads);
       if (!retry.error) return true;
-      error = retry.error;
+      
+      const ultraFallbackPayloads = payloads.map((p) => stripH1AndOptionalColumns(p, true));
+      const retryUltra = await client.from('hari_h_distributions').upsert(ultraFallbackPayloads);
+      if (!retryUltra.error) return true;
+      error = retryUltra.error;
     }
     if (error) {
       console.warn('[Supabase] Bulk upsert Hari H error:', error.message);

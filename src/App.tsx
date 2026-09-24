@@ -98,13 +98,29 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           return parsed.map((g) => {
+            let h1Siang = g.h1SiangQty;
+            let h1Malam = g.h1MalamQty;
+            if (h1Siang === undefined || h1Siang === null || (h1Siang === 0 && g.no <= 14)) {
+              h1Siang = g.no <= 14 ? (g.siangQty || 2) : (g.no === 64 ? 5 : 0);
+            }
+            if (h1Malam === undefined || h1Malam === null || (h1Malam === 0 && g.no <= 14)) {
+              h1Malam = g.no <= 14 ? (g.malamQty || 2) : (g.no === 64 ? 10 : 0);
+            }
             if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
-              return { ...g, category: 'Eksternal' as const };
+              return { ...g, category: 'Eksternal' as const, h1SiangQty: h1Siang, h1MalamQty: h1Malam };
             }
             if (g.no === 64 && g.category !== 'Buffer') {
-              return { ...g, category: 'Buffer' as const };
+              return { ...g, category: 'Buffer' as const, h1SiangQty: h1Siang, h1MalamQty: h1Malam };
             }
-            return g;
+            return {
+              ...g,
+              h1SiangQty: h1Siang,
+              h1SiangMenu: g.h1SiangMenu || 'Nasi Ladas',
+              h1SiangStatus: g.h1SiangStatus || 'pending',
+              h1MalamQty: h1Malam,
+              h1MalamMenu: g.h1MalamMenu || 'Nasi Padang Puti Minang',
+              h1MalamStatus: g.h1MalamStatus || 'pending',
+            };
           });
         }
       } catch (e) {
@@ -1173,6 +1189,37 @@ export default function App() {
     return true;
   };
 
+  const handlePopulateDefaultH1 = async (): Promise<boolean> => {
+    const updatedList = hariHGroups.map((g) => {
+      let defaultH1Siang = g.h1SiangQty || 0;
+      let defaultH1Malam = g.h1MalamQty || 0;
+      if (g.no <= 14) {
+        defaultH1Siang = (g.h1SiangQty && g.h1SiangQty > 0) ? g.h1SiangQty : (g.siangQty || 2);
+        defaultH1Malam = (g.h1MalamQty && g.h1MalamQty > 0) ? g.h1MalamQty : (g.malamQty || 2);
+      } else if (g.no === 64) {
+        defaultH1Siang = (g.h1SiangQty && g.h1SiangQty > 0) ? g.h1SiangQty : 5;
+        defaultH1Malam = (g.h1MalamQty && g.h1MalamQty > 0) ? g.h1MalamQty : 10;
+      }
+      return {
+        ...g,
+        h1SiangQty: defaultH1Siang,
+        h1SiangMenu: g.h1SiangMenu || 'Nasi Ladas',
+        h1SiangStatus: g.h1SiangStatus || 'pending',
+        h1MalamQty: defaultH1Malam,
+        h1MalamMenu: g.h1MalamMenu || 'Nasi Padang Puti Minang',
+        h1MalamStatus: g.h1MalamStatus || 'pending',
+      };
+    });
+
+    setHariHGroups(updatedList);
+    localStorage.setItem('hbd_hari_h_groups', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      await bulkUpsertHariHToSupabase(updatedList);
+    }
+    return true;
+  };
+
   const handleSaveVoucher = async (voucher: VoucherDistributionItem, isNew: boolean): Promise<boolean> => {
     let updatedList: VoucherDistributionItem[];
     if (isNew) {
@@ -1334,6 +1381,7 @@ export default function App() {
             hariHGroups={hariHGroups}
             onSaveHariHGroup={handleSaveHariHGroup}
             onDeleteHariHGroup={handleDeleteHariHGroup}
+            onPopulateDefaultH1={handlePopulateDefaultH1}
             vouchers={vouchers}
             onSaveVoucher={handleSaveVoucher}
             onDeleteVoucher={handleDeleteVoucherItem}

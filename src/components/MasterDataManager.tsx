@@ -42,6 +42,7 @@ interface MasterDataManagerProps {
   hariHGroups: HariHGroupDistribution[];
   onSaveHariHGroup: (group: HariHGroupDistribution, isNew: boolean) => Promise<boolean>;
   onDeleteHariHGroup: (id: string, groupNo?: number) => Promise<boolean>;
+  onPopulateDefaultH1?: () => Promise<boolean>;
 
   // Voucher
   vouchers: VoucherDistributionItem[];
@@ -67,6 +68,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
   hariHGroups,
   onSaveHariHGroup,
   onDeleteHariHGroup,
+  onPopulateDefaultH1,
   vouchers,
   onSaveVoucher,
   onDeleteVoucher,
@@ -93,6 +95,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
     localStorage.setItem('hbd_master_subtab', tab);
   };
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSettingDefaultH1, setIsSettingDefaultH1] = useState(false);
 
   // Common Notification
   const [notification, setNotification] = useState<{
@@ -136,6 +139,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
 
   const handleOpenHariHCreate = () => {
     const nextNo = hariHGroups.length > 0 ? Math.max(...hariHGroups.map((g) => g.no)) + 1 : 1;
+    const isMdOrInternal = nextNo <= 14;
     setEditingHariH({
       id: `h-grp-custom-${Date.now()}`,
       no: nextNo,
@@ -143,10 +147,10 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
       picName: '',
       picPhone: '',
       category: nextNo >= 40 ? (nextNo === 64 ? 'Buffer' : 'Eksternal') : 'Internal',
-      h1SiangQty: 0,
+      h1SiangQty: isMdOrInternal ? 2 : (nextNo === 64 ? 5 : 0),
       h1SiangMenu: 'Nasi Ladas',
       h1SiangStatus: 'pending',
-      h1MalamQty: 0,
+      h1MalamQty: isMdOrInternal ? 2 : (nextNo === 64 ? 10 : 0),
       h1MalamMenu: 'Nasi Padang Puti Minang',
       h1MalamStatus: 'pending',
       pagiQty: 0,
@@ -175,12 +179,27 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
   };
 
   const handleOpenHariHEdit = (group: HariHGroupDistribution) => {
+    let defaultH1Siang = group.h1SiangQty;
+    let defaultH1Malam = group.h1MalamQty;
+    if (group.no <= 14 && (defaultH1Siang === undefined || defaultH1Siang === 0)) {
+      defaultH1Siang = group.siangQty || 2;
+    }
+    if (group.no <= 14 && (defaultH1Malam === undefined || defaultH1Malam === 0)) {
+      defaultH1Malam = group.malamQty || 2;
+    }
+    if (group.no === 64 && (defaultH1Siang === undefined || defaultH1Siang === 0)) {
+      defaultH1Siang = 5;
+    }
+    if (group.no === 64 && (defaultH1Malam === undefined || defaultH1Malam === 0)) {
+      defaultH1Malam = 10;
+    }
+
     setEditingHariH({
       ...group,
-      h1SiangQty: group.h1SiangQty ?? 0,
+      h1SiangQty: defaultH1Siang ?? 0,
       h1SiangMenu: group.h1SiangMenu || 'Nasi Ladas',
       h1SiangStatus: group.h1SiangStatus || 'pending',
-      h1MalamQty: group.h1MalamQty ?? 0,
+      h1MalamQty: defaultH1Malam ?? 0,
       h1MalamMenu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
       h1MalamStatus: group.h1MalamStatus || 'pending',
     });
@@ -734,6 +753,23 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                   Buffer (64)
                 </button>
               </div>
+
+              {onPopulateDefaultH1 && (
+                <button
+                  onClick={async () => {
+                    setIsSettingDefaultH1(true);
+                    await onPopulateDefaultH1();
+                    setIsSettingDefaultH1(false);
+                    showNotification('success', 'Berhasil mengisi porsi default H-1 untuk 14 Sub-Divisi Panitia MD (2 porsi Ladas & 2 porsi Puti Minang) & Buffer!');
+                  }}
+                  disabled={isSettingDefaultH1}
+                  className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition-all disabled:opacity-50"
+                  title="Isi otomatis 2 porsi H-1 Siang (Nasi Ladas) & 2 porsi H-1 Malam (Puti Minang) untuk 14 Sub-Divisi Panitia MD dan 5/10 untuk Buffer"
+                >
+                  <Sparkles className={`w-4 h-4 ${isSettingDefaultH1 ? 'animate-spin' : ''}`} />
+                  <span>{isSettingDefaultH1 ? 'Menyinkronkan...' : '⚡ Set Default H-1 Panitia MD'}</span>
+                </button>
+              )}
 
               <button
                 onClick={handleOpenHariHCreate}

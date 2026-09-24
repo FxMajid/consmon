@@ -115,6 +115,21 @@ ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_status
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_picked_at TEXT;
 ALTER TABLE public.hari_h_distributions ADD COLUMN IF NOT EXISTS h1_malam_receiver TEXT;
 
+-- Update data default porsi H-1 untuk 14 Sub-Divisi Panitia MD & Buffer bila masih 0
+UPDATE public.hari_h_distributions 
+SET h1_siang_qty = COALESCE(NULLIF(siang_qty, 0), 2),
+    h1_malam_qty = COALESCE(NULLIF(malam_qty, 0), 2),
+    h1_siang_menu = 'Nasi Ladas',
+    h1_malam_menu = 'Nasi Padang Puti Minang'
+WHERE no <= 14 AND (h1_siang_qty = 0 OR h1_siang_qty IS NULL);
+
+UPDATE public.hari_h_distributions 
+SET h1_siang_qty = 5,
+    h1_malam_qty = 10,
+    h1_siang_menu = 'Nasi Ladas',
+    h1_malam_menu = 'Nasi Padang Puti Minang'
+WHERE no = 64 AND (h1_siang_qty = 0 OR h1_siang_qty IS NULL);
+
 -- Refresh cache & pastikan izin role anon
 GRANT ALL ON TABLE public.hari_h_distributions TO anon, authenticated;
 `;

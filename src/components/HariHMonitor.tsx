@@ -78,15 +78,24 @@ export function isGroupActivatedByIdCards(
     }
 
     // 2. Match by area kerja with group name / members / notes
-    if (areaClean && areaClean.length >= 3) {
+    if (areaClean) {
       if (groupClean.includes(areaClean) || areaClean.includes(groupClean)) {
         return { isActivated: true, matchedCard: card };
+      }
+
+      // Handle specific abbreviations and short codes (WP, OB, etc.)
+      const isShortWord = areaClean.length <= 3;
+      if (isShortWord) {
+        const regex = new RegExp(`\\b${areaClean}\\b`, 'i');
+        if (regex.test(group.groupName) || regex.test(group.members || '') || regex.test(group.notes || '')) {
+          return { isActivated: true, matchedCard: card };
+        }
       }
 
       // Check keyword parts of area kerja
       const areaKeywords = areaClean
         .split(' ')
-        .filter((w) => w.length >= 4 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos'].includes(w));
+        .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan'].includes(w));
       for (const kw of areaKeywords) {
         if (groupClean.includes(kw) || membersClean.includes(kw)) {
           return { isActivated: true, matchedCard: card };

@@ -42,7 +42,7 @@ interface KartuAksesTableProps {
   onOpenStaticQrModal?: () => void;
   onOpenScanner: () => void;
   onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
-  onClaimMeal: (cardId: string, meal: 'pagi' | 'siang' | 'malam') => void;
+  onClaimMeal: (cardId: string, meal: 'pagi' | 'snackPagi' | 'siang' | 'snackSiang' | 'malam') => void;
   onResetActivation?: (cardId: string) => void;
   onDeleteCard?: (cardId: string) => void;
 }
@@ -128,10 +128,12 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
     
     // Total meal claims among active cards
     const pagiClaimed = idCards.filter((c) => c.claimedMeals?.pagi?.claimed).length;
+    const snackPagiClaimed = idCards.filter((c) => c.claimedMeals?.snackPagi?.claimed).length;
     const siangClaimed = idCards.filter((c) => c.claimedMeals?.siang?.claimed).length;
+    const snackSiangClaimed = idCards.filter((c) => c.claimedMeals?.snackSiang?.claimed).length;
     const malamClaimed = idCards.filter((c) => c.claimedMeals?.malam?.claimed).length;
 
-    return { total, active, unactivated, pagiClaimed, siangClaimed, malamClaimed };
+    return { total, active, unactivated, pagiClaimed, snackPagiClaimed, siangClaimed, snackSiangClaimed, malamClaimed };
   }, [idCards]);
 
   // Active / Activated Cards sorted by activation date (most recent first)
@@ -572,20 +574,167 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                     </div>
 
                     {/* Meal Status on Hari H */}
-                    <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 mb-3">
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                        <span>Jatah Makan Hari H:</span>
-                        <span className="text-[9px] font-normal text-slate-400">Status Pengambilan</span>
+                    <div className={`rounded-xl p-2.5 border mb-3 transition-colors ${
+                      isCardActive ? 'bg-emerald-50/40 border-emerald-200/80' : 'bg-slate-50 border-slate-100'
+                    }`}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-slate-700">
+                          <Utensils className="w-3 h-3 text-emerald-600" />
+                          <span>Jatah Konsumsi Hari H:</span>
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isCardActive 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/60' 
+                            : 'bg-amber-100 text-amber-800 border border-amber-300/60'
+                        }`}>
+                          {isCardActive ? '✓ 5 Sesi Teraktivasi' : 'Belum Diaktivasi'}
+                        </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
-                        <div className={`p-1 rounded ${card.claimedMeals?.pagi?.claimed ? 'bg-emerald-100 text-emerald-900 font-bold' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                          Pagi: {card.claimedMeals?.pagi?.claimed ? 'Sudah' : 'Belum'}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 text-[10px]">
+                        {/* Sarapan Pagi */}
+                        <div className={`p-1.5 rounded-lg border text-center flex flex-col justify-between transition-all ${
+                          isCardActive
+                            ? card.claimedMeals?.pagi?.claimed
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-white border-emerald-200 text-emerald-800 shadow-2xs'
+                            : 'bg-slate-100/70 border-slate-200 text-slate-400'
+                        }`}>
+                          <div className="text-[9px] font-bold text-slate-700 truncate">Sarapan Pagi</div>
+                          <div className="text-[8.5px] text-slate-400">06.30</div>
+                          <div className="mt-1">
+                            {isCardActive ? (
+                              card.claimedMeals?.pagi?.claimed ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[8px]">
+                                  Sudah Diambil
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[8px]">
+                                  ✓ Sudah Aktivasi
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 text-[8px]">
+                                Belum
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className={`p-1 rounded ${card.claimedMeals?.siang?.claimed ? 'bg-emerald-100 text-emerald-900 font-bold' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                          Siang: {card.claimedMeals?.siang?.claimed ? 'Sudah' : 'Belum'}
+
+                        {/* Snack Pagi */}
+                        <div className={`p-1.5 rounded-lg border text-center flex flex-col justify-between transition-all ${
+                          isCardActive
+                            ? card.claimedMeals?.snackPagi?.claimed
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-white border-emerald-200 text-emerald-800 shadow-2xs'
+                            : 'bg-slate-100/70 border-slate-200 text-slate-400'
+                        }`}>
+                          <div className="text-[9px] font-bold text-slate-700 truncate">Snack Pagi</div>
+                          <div className="text-[8.5px] text-slate-400">09.30</div>
+                          <div className="mt-1">
+                            {isCardActive ? (
+                              card.claimedMeals?.snackPagi?.claimed ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[8px]">
+                                  Sudah Diambil
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[8px]">
+                                  ✓ Sudah Aktivasi
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 text-[8px]">
+                                Belum
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className={`p-1 rounded ${card.claimedMeals?.malam?.claimed ? 'bg-emerald-100 text-emerald-900 font-bold' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                          Malam: {card.claimedMeals?.malam?.claimed ? 'Sudah' : 'Belum'}
+
+                        {/* Makan Siang */}
+                        <div className={`p-1.5 rounded-lg border text-center flex flex-col justify-between transition-all ${
+                          isCardActive
+                            ? card.claimedMeals?.siang?.claimed
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-white border-emerald-200 text-emerald-800 shadow-2xs'
+                            : 'bg-slate-100/70 border-slate-200 text-slate-400'
+                        }`}>
+                          <div className="text-[9px] font-bold text-slate-700 truncate">Makan Siang</div>
+                          <div className="text-[8.5px] text-slate-400">11.30</div>
+                          <div className="mt-1">
+                            {isCardActive ? (
+                              card.claimedMeals?.siang?.claimed ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[8px]">
+                                  Sudah Diambil
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[8px]">
+                                  ✓ Sudah Aktivasi
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 text-[8px]">
+                                Belum
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Snack Sore */}
+                        <div className={`p-1.5 rounded-lg border text-center flex flex-col justify-between transition-all ${
+                          isCardActive
+                            ? card.claimedMeals?.snackSiang?.claimed
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-white border-emerald-200 text-emerald-800 shadow-2xs'
+                            : 'bg-slate-100/70 border-slate-200 text-slate-400'
+                        }`}>
+                          <div className="text-[9px] font-bold text-slate-700 truncate">Snack Sore</div>
+                          <div className="text-[8.5px] text-slate-400">15.00</div>
+                          <div className="mt-1">
+                            {isCardActive ? (
+                              card.claimedMeals?.snackSiang?.claimed ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[8px]">
+                                  Sudah Diambil
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[8px]">
+                                  ✓ Sudah Aktivasi
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 text-[8px]">
+                                Belum
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Makan Malam */}
+                        <div className={`p-1.5 rounded-lg border text-center flex flex-col justify-between transition-all ${
+                          isCardActive
+                            ? card.claimedMeals?.malam?.claimed
+                              ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
+                              : 'bg-white border-emerald-200 text-emerald-800 shadow-2xs'
+                            : 'bg-slate-100/70 border-slate-200 text-slate-400'
+                        }`}>
+                          <div className="text-[9px] font-bold text-slate-700 truncate">Makan Malam</div>
+                          <div className="text-[8.5px] text-slate-400">17.30</div>
+                          <div className="mt-1">
+                            {isCardActive ? (
+                              card.claimedMeals?.malam?.claimed ? (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[8px]">
+                                  Sudah Diambil
+                                </span>
+                              ) : (
+                                <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-[8px]">
+                                  ✓ Sudah Aktivasi
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 text-[8px]">
+                                Belum
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -804,8 +953,10 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                     <th className="py-3 px-3">Nama Pemegang</th>
                     <th className="py-3 px-3">Email</th>
                     <th className="py-3 px-3">Area Kerja</th>
-                    <th className="py-3 px-2 text-center">Pagi</th>
+                    <th className="py-3 px-2 text-center">Sarapan</th>
+                    <th className="py-3 px-2 text-center">Snk Pagi</th>
                     <th className="py-3 px-2 text-center">Siang</th>
+                    <th className="py-3 px-2 text-center">Snk Sore</th>
                     <th className="py-3 px-2 text-center">Malam</th>
                     <th className="py-3 px-3 text-right">Aksi</th>
                   </tr>
@@ -813,7 +964,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredActivatedCards.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-12 text-center text-slate-400">
+                      <td colSpan={12} className="py-12 text-center text-slate-400">
                         <Activity className="w-8 h-8 mx-auto text-slate-300 mb-2 opacity-60" />
                         <div className="text-xs font-semibold text-slate-600">Belum Ada Aktivasi yang Sesuai</div>
                         <div className="text-[11px] text-slate-400 mt-0.5">
@@ -851,51 +1002,92 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                           </span>
                         </td>
 
-                        {/* Status Jatah Makan */}
-                        <td className="py-3 px-2 text-center">
+                        {/* Status Jatah Makan: Pagi */}
+                        <td className="py-3 px-1.5 text-center">
                           {card.claimedMeals?.pagi?.claimed ? (
-                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9.5px] font-bold">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>Sudah</span>
                             </span>
                           ) : (
                             <button
                               onClick={() => onClaimMeal(card.id, 'pagi')}
-                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9.5px] font-bold border border-emerald-200 transition-colors"
+                              title="Klaim Sarapan Pagi"
                             >
-                              + Klaim
+                              ✓ Aktif
                             </button>
                           )}
                         </td>
 
-                        <td className="py-3 px-2 text-center">
+                        {/* Status Jatah Makan: Snack Pagi */}
+                        <td className="py-3 px-1.5 text-center">
+                          {card.claimedMeals?.snackPagi?.claimed ? (
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9.5px] font-bold">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Sudah</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onClaimMeal(card.id, 'snackPagi')}
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9.5px] font-bold border border-emerald-200 transition-colors"
+                              title="Klaim Snack Pagi"
+                            >
+                              ✓ Aktif
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Status Jatah Makan: Siang */}
+                        <td className="py-3 px-1.5 text-center">
                           {card.claimedMeals?.siang?.claimed ? (
-                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9.5px] font-bold">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>Sudah</span>
                             </span>
                           ) : (
                             <button
                               onClick={() => onClaimMeal(card.id, 'siang')}
-                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9.5px] font-bold border border-emerald-200 transition-colors"
+                              title="Klaim Makan Siang"
                             >
-                              + Klaim
+                              ✓ Aktif
                             </button>
                           )}
                         </td>
 
-                        <td className="py-3 px-2 text-center">
+                        {/* Status Jatah Makan: Snack Sore */}
+                        <td className="py-3 px-1.5 text-center">
+                          {card.claimedMeals?.snackSiang?.claimed ? (
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9.5px] font-bold">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Sudah</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onClaimMeal(card.id, 'snackSiang')}
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9.5px] font-bold border border-emerald-200 transition-colors"
+                              title="Klaim Snack Sore"
+                            >
+                              ✓ Aktif
+                            </button>
+                          )}
+                        </td>
+
+                        {/* Status Jatah Makan: Malam */}
+                        <td className="py-3 px-1.5 text-center">
                           {card.claimedMeals?.malam?.claimed ? (
-                            <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9.5px] font-bold">
                               <CheckCircle2 className="w-3 h-3" />
                               <span>Sudah</span>
                             </span>
                           ) : (
                             <button
                               onClick={() => onClaimMeal(card.id, 'malam')}
-                              className="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 text-[10px] font-semibold border border-slate-200 transition-colors"
+                              className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[9.5px] font-bold border border-emerald-200 transition-colors"
+                              title="Klaim Makan Malam"
                             >
-                              + Klaim
+                              ✓ Aktif
                             </button>
                           )}
                         </td>

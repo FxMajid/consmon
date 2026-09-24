@@ -150,7 +150,9 @@ export interface IDCardKonsumsi {
   notes?: string;
   claimedMeals?: {
     pagi?: { claimed: boolean; claimedAt?: string };
+    snackPagi?: { claimed: boolean; claimedAt?: string };
     siang?: { claimed: boolean; claimedAt?: string };
+    snackSiang?: { claimed: boolean; claimedAt?: string };
     malam?: { claimed: boolean; claimedAt?: string };
   };
 }

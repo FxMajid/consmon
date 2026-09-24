@@ -22,7 +22,7 @@ interface DigitalPickupQrModalProps {
   isOpen: boolean;
   onClose: () => void;
   card: IDCardKonsumsi | null;
-  onClaimMeal?: (cardId: string, meal: 'pagi' | 'siang' | 'malam') => void;
+  onClaimMeal?: (cardId: string, meal: 'pagi' | 'snackPagi' | 'siang' | 'snackSiang' | 'malam') => void;
   onResetActivation?: (cardId: string) => void;
 }
 
@@ -220,18 +220,25 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
               <span className="text-[10px] text-slate-400 font-normal">Pos Pemeriksaan</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              {/* Pagi */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+              {/* Sarapan Pagi */}
               <div
                 className={`p-2 rounded-lg border ${
                   card.claimedMeals?.pagi?.claimed
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
                 }`}
               >
-                <div className="text-[10px] font-semibold text-slate-500">06.30 Pagi</div>
-                <div className="text-xs font-bold mt-0.5">
-                  {card.claimedMeals?.pagi?.claimed ? 'Sudah Diambil' : 'Belum'}
+                <div className="text-[10px] font-bold text-slate-700">Sarapan Pagi</div>
+                <div className="text-[9px] text-slate-400">06.30 WIB</div>
+                <div className="text-xs font-bold mt-1">
+                  {card.claimedMeals?.pagi?.claimed ? (
+                    <span className="text-emerald-700">Sudah Diambil</span>
+                  ) : (
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                      ✓ Sudah Aktivasi
+                    </span>
+                  )}
                 </div>
                 {card.claimedMeals?.pagi?.claimedAt && (
                   <div className="text-[9px] text-emerald-700 mt-0.5">
@@ -248,17 +255,58 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
                 )}
               </div>
 
-              {/* Siang */}
+              {/* Snack Pagi */}
+              <div
+                className={`p-2 rounded-lg border ${
+                  card.claimedMeals?.snackPagi?.claimed
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                }`}
+              >
+                <div className="text-[10px] font-bold text-slate-700">Snack Pagi</div>
+                <div className="text-[9px] text-slate-400">09.30 WIB</div>
+                <div className="text-xs font-bold mt-1">
+                  {card.claimedMeals?.snackPagi?.claimed ? (
+                    <span className="text-emerald-700">Sudah Diambil</span>
+                  ) : (
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                      ✓ Sudah Aktivasi
+                    </span>
+                  )}
+                </div>
+                {card.claimedMeals?.snackPagi?.claimedAt && (
+                  <div className="text-[9px] text-emerald-700 mt-0.5">
+                    {card.claimedMeals.snackPagi.claimedAt}
+                  </div>
+                )}
+                {onClaimMeal && !card.claimedMeals?.snackPagi?.claimed && (
+                  <button
+                    onClick={() => onClaimMeal(card.id, 'snackPagi')}
+                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                  >
+                    Klaim Snack
+                  </button>
+                )}
+              </div>
+
+              {/* Makan Siang */}
               <div
                 className={`p-2 rounded-lg border ${
                   card.claimedMeals?.siang?.claimed
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
                 }`}
               >
-                <div className="text-[10px] font-semibold text-slate-500">11.30 Siang</div>
-                <div className="text-xs font-bold mt-0.5">
-                  {card.claimedMeals?.siang?.claimed ? 'Sudah Diambil' : 'Belum'}
+                <div className="text-[10px] font-bold text-slate-700">Makan Siang</div>
+                <div className="text-[9px] text-slate-400">11.30 WIB</div>
+                <div className="text-xs font-bold mt-1">
+                  {card.claimedMeals?.siang?.claimed ? (
+                    <span className="text-emerald-700">Sudah Diambil</span>
+                  ) : (
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                      ✓ Sudah Aktivasi
+                    </span>
+                  )}
                 </div>
                 {card.claimedMeals?.siang?.claimedAt && (
                   <div className="text-[9px] text-emerald-700 mt-0.5">
@@ -275,17 +323,58 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
                 )}
               </div>
 
-              {/* Malam */}
+              {/* Snack Sore */}
+              <div
+                className={`p-2 rounded-lg border ${
+                  card.claimedMeals?.snackSiang?.claimed
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
+                }`}
+              >
+                <div className="text-[10px] font-bold text-slate-700">Snack Sore</div>
+                <div className="text-[9px] text-slate-400">15.00 WIB</div>
+                <div className="text-xs font-bold mt-1">
+                  {card.claimedMeals?.snackSiang?.claimed ? (
+                    <span className="text-emerald-700">Sudah Diambil</span>
+                  ) : (
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                      ✓ Sudah Aktivasi
+                    </span>
+                  )}
+                </div>
+                {card.claimedMeals?.snackSiang?.claimedAt && (
+                  <div className="text-[9px] text-emerald-700 mt-0.5">
+                    {card.claimedMeals.snackSiang.claimedAt}
+                  </div>
+                )}
+                {onClaimMeal && !card.claimedMeals?.snackSiang?.claimed && (
+                  <button
+                    onClick={() => onClaimMeal(card.id, 'snackSiang')}
+                    className="mt-1.5 w-full py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold hover:bg-emerald-700"
+                  >
+                    Klaim Snack
+                  </button>
+                )}
+              </div>
+
+              {/* Makan Malam */}
               <div
                 className={`p-2 rounded-lg border ${
                   card.claimedMeals?.malam?.claimed
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                    : 'bg-emerald-50/40 border-emerald-300/80 text-emerald-900'
                 }`}
               >
-                <div className="text-[10px] font-semibold text-slate-500">17.30 Malam</div>
-                <div className="text-xs font-bold mt-0.5">
-                  {card.claimedMeals?.malam?.claimed ? 'Sudah Diambil' : 'Belum'}
+                <div className="text-[10px] font-bold text-slate-700">Makan Malam</div>
+                <div className="text-[9px] text-slate-400">17.30 WIB</div>
+                <div className="text-xs font-bold mt-1">
+                  {card.claimedMeals?.malam?.claimed ? (
+                    <span className="text-emerald-700">Sudah Diambil</span>
+                  ) : (
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px]">
+                      ✓ Sudah Aktivasi
+                    </span>
+                  )}
                 </div>
                 {card.claimedMeals?.malam?.claimedAt && (
                   <div className="text-[9px] text-emerald-700 mt-0.5">

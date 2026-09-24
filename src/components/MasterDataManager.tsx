@@ -1224,14 +1224,20 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <div className="flex items-center justify-center space-x-1 text-[10px]">
-                              <span className={`px-1.5 py-0.5 rounded ${meals.pagi?.claimed ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Pagi">
+                            <div className="flex items-center justify-center space-x-0.5 text-[9.5px]">
+                              <span className={`px-1 py-0.5 rounded ${meals.pagi?.claimed ? 'bg-emerald-600 text-white font-bold' : card.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-slate-100 text-slate-400'}`} title="Sarapan Pagi (06.30)">
                                 P
                               </span>
-                              <span className={`px-1.5 py-0.5 rounded ${meals.siang?.claimed ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Siang">
+                              <span className={`px-1 py-0.5 rounded ${meals.snackPagi?.claimed ? 'bg-emerald-600 text-white font-bold' : card.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-slate-100 text-slate-400'}`} title="Snack Pagi (09.30)">
+                                SP
+                              </span>
+                              <span className={`px-1 py-0.5 rounded ${meals.siang?.claimed ? 'bg-emerald-600 text-white font-bold' : card.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-slate-100 text-slate-400'}`} title="Makan Siang (11.30)">
                                 S
                               </span>
-                              <span className={`px-1.5 py-0.5 rounded ${meals.malam?.claimed ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-500'}`} title="Malam">
+                              <span className={`px-1 py-0.5 rounded ${meals.snackSiang?.claimed ? 'bg-emerald-600 text-white font-bold' : card.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-slate-100 text-slate-400'}`} title="Snack Sore (15.00)">
+                                SS
+                              </span>
+                              <span className={`px-1 py-0.5 rounded ${meals.malam?.claimed ? 'bg-emerald-600 text-white font-bold' : card.status === 'active' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-slate-100 text-slate-400'}`} title="Makan Malam (17.30)">
                                 M
                               </span>
                             </div>

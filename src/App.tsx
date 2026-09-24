@@ -1001,7 +1001,9 @@ export default function App() {
         activatedAt: timeStr,
         claimedMeals: existing.claimedMeals || {
           pagi: { claimed: false },
+          snackPagi: { claimed: false },
           siang: { claimed: false },
+          snackSiang: { claimed: false },
           malam: { claimed: false },
         },
       };
@@ -1020,7 +1022,9 @@ export default function App() {
         kategori: 'Internal',
         claimedMeals: {
           pagi: { claimed: false },
+          snackPagi: { claimed: false },
           siang: { claimed: false },
+          snackSiang: { claimed: false },
           malam: { claimed: false },
         },
       };
@@ -1056,7 +1060,9 @@ export default function App() {
       activatedAt: undefined,
       claimedMeals: {
         pagi: { claimed: false },
+        snackPagi: { claimed: false },
         siang: { claimed: false },
+        snackSiang: { claimed: false },
         malam: { claimed: false },
       },
     };
@@ -1079,14 +1085,16 @@ export default function App() {
   };
 
   // ID Card Meal Claim Handler
-  const handleClaimIdCardMeal = (cardId: string, meal: 'pagi' | 'siang' | 'malam') => {
+  const handleClaimIdCardMeal = (cardId: string, meal: 'pagi' | 'snackPagi' | 'siang' | 'snackSiang' | 'malam') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     setIdCards((prev) =>
       prev.map((c) => {
         if (c.id === cardId) {
           const currentClaimed = c.claimedMeals || {
             pagi: { claimed: false },
+            snackPagi: { claimed: false },
             siang: { claimed: false },
+            snackSiang: { claimed: false },
             malam: { claimed: false },
           };
           const updated = {
@@ -1112,7 +1120,9 @@ export default function App() {
       if (prev.card && prev.card.id === cardId) {
         const currentClaimed = prev.card.claimedMeals || {
           pagi: { claimed: false },
+          snackPagi: { claimed: false },
           siang: { claimed: false },
+          snackSiang: { claimed: false },
           malam: { claimed: false },
         };
         return {

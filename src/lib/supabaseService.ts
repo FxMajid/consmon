@@ -529,9 +529,8 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
     let { error } = await client.from('hari_h_distributions').upsert(payloads);
     if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
       const fallbackPayloads = payloads.map((p) => {
-        const copy = { ...p };
-        delete copy.members;
-        return copy;
+        const { members: _discarded, ...rest } = p;
+        return rest;
       });
       const retry = await client.from('hari_h_distributions').upsert(fallbackPayloads);
       if (!retry.error) return true;

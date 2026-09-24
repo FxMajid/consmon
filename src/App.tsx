@@ -952,6 +952,42 @@ export default function App() {
     return activatedCard;
   };
 
+  // ID Card Reset / Deactivate Handler (Kembalikan status kartu menjadi unactivated agar bisa diaktivasi ulang)
+  const handleResetIdCardActivation = async (cardId: string) => {
+    const existing = idCards.find((c) => c.id === cardId);
+    if (!existing) return;
+
+    const resetCard: IDCardKonsumsi = {
+      ...existing,
+      status: 'unactivated',
+      holderName: undefined,
+      holderEmail: undefined,
+      areaKerja: undefined,
+      activatedAt: undefined,
+      claimedMeals: {
+        pagi: { claimed: false },
+        siang: { claimed: false },
+        malam: { claimed: false },
+      },
+    };
+
+    const updatedList = idCards.map((c) => (c.id === cardId ? resetCard : c));
+    setIdCards(updatedList);
+    localStorage.setItem('hbd_id_cards', JSON.stringify(updatedList));
+
+    if (isSupabaseConfigured()) {
+      await upsertIdCardToSupabase(resetCard);
+    }
+
+    // Close digital QR modal if open for this card
+    setDigitalQrModalState((prev) => {
+      if (prev.card && prev.card.id === cardId) {
+        return { isOpen: false, card: null };
+      }
+      return prev;
+    });
+  };
+
   // ID Card Meal Claim Handler
   const handleClaimIdCardMeal = (cardId: string, meal: 'pagi' | 'siang' | 'malam') => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -1236,6 +1272,8 @@ export default function App() {
             onOpenScanner={() => setIsScannerOpen(true)}
             onOpenImport={handleOpenImport}
             onClaimMeal={handleClaimIdCardMeal}
+            onResetActivation={handleResetIdCardActivation}
+            onDeleteCard={handleDeleteIdCardItem}
           />
         )}
 
@@ -1322,6 +1360,7 @@ export default function App() {
         card={activationModalState.card}
         allCards={idCards}
         onActivateCard={handleActivateIdCard}
+        onResetActivation={handleResetIdCardActivation}
         onSuccessOpenQr={(card) => {
           setActivationModalState({ isOpen: false, card: null });
           setDigitalQrModalState({ isOpen: true, card });
@@ -1334,6 +1373,7 @@ export default function App() {
         onClose={() => setDigitalQrModalState({ isOpen: false, card: null })}
         card={digitalQrModalState.card}
         onClaimMeal={handleClaimIdCardMeal}
+        onResetActivation={handleResetIdCardActivation}
       />
 
       {/* Modal Cetak Fisik ID Card Konsumsi beserta QR Aktivasi */}

@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   QrCode,
-  Smartphone
+  Smartphone,
+  RotateCcw
 } from 'lucide-react';
 import { IDCardKonsumsi } from '../types';
 import { WORK_AREAS } from '../data/idCardData';
@@ -26,6 +27,7 @@ interface IdCardActivationModalProps {
     cardId: string, 
     data: { name: string; email: string; areaKerja: string }
   ) => IDCardKonsumsi | undefined;
+  onResetActivation?: (cardId: string) => void;
   onSuccessOpenQr: (card: IDCardKonsumsi) => void;
 }
 
@@ -35,6 +37,7 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
   card,
   allCards,
   onActivateCard,
+  onResetActivation,
   onSuccessOpenQr,
 }) => {
   // 3 Primary User Fields requested:
@@ -183,6 +186,42 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
             {showAdvancedCardPicker ? 'Sembunyikan Pilihan ID' : 'Ganti Nomor Kartu Fisik'}
           </button>
         </div>
+
+        {/* Current Active Card Alert / Reset Option */}
+        {currentCard?.status === 'active' && (
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-start space-x-2 text-amber-900">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Kartu {currentCard.id} sudah aktif:</span> {currentCard.holderName} ({currentCard.areaKerja})
+                <p className="text-[11px] text-amber-800">
+                  Anda dapat mengubah data langsung atau menghapus aktivasi agar kartu kembali kosong.
+                </p>
+              </div>
+            </div>
+            {onResetActivation && (
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    `Hapus data aktivasi untuk ${currentCard.id} (${currentCard.holderName})?\n\n` +
+                    `Kartu akan kembali ke status "Belum Diaktivasi".`
+                  );
+                  if (confirmed) {
+                    onResetActivation(currentCard.id);
+                    setName('');
+                    setContact('');
+                    setAreaKerja(WORK_AREAS[0]);
+                  }
+                }}
+                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shadow-2xs shrink-0 self-start sm:self-center transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset / Hapus Data Ini</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">

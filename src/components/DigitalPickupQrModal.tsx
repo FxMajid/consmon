@@ -12,7 +12,8 @@ import {
   Utensils, 
   AlertCircle,
   Copy,
-  Check
+  Check,
+  RotateCcw
 } from 'lucide-react';
 import { IDCardKonsumsi, MealTimeSlot } from '../types';
 import { generateQrDataUrl } from '../utils/barcodeUtils';
@@ -22,6 +23,7 @@ interface DigitalPickupQrModalProps {
   onClose: () => void;
   card: IDCardKonsumsi | null;
   onClaimMeal?: (cardId: string, meal: 'pagi' | 'siang' | 'malam') => void;
+  onResetActivation?: (cardId: string) => void;
 }
 
 export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
@@ -29,6 +31,7 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
   onClose,
   card,
   onClaimMeal,
+  onResetActivation,
 }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const barcodeSvgRef = useRef<SVGSVGElement | null>(null);
@@ -328,6 +331,26 @@ export const DigitalPickupQrModal: React.FC<DigitalPickupQrModalProps> = ({
               <Printer className="w-3.5 h-3.5" />
               <span>Cetak</span>
             </button>
+
+            {onResetActivation && (
+              <button
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    `Hapus / batalkan data aktivasi untuk ${card.id} (${card.holderName || 'Panitia'})?\n\n` +
+                    `Kartu akan dikembalikan ke status "Belum Diaktivasi" dan dapat diaktivasi ulang.`
+                  );
+                  if (confirmed) {
+                    onResetActivation(card.id);
+                    onClose();
+                  }
+                }}
+                className="inline-flex items-center space-x-1 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-semibold shadow-2xs transition-colors"
+                title="Batalkan aktivasi kartu ini"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                <span>Reset Aktivasi</span>
+              </button>
+            )}
           </div>
 
           <button

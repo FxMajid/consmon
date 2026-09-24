@@ -26,7 +26,11 @@ import {
   Download,
   Upload,
   Radio,
-  Clock
+  Clock,
+  RotateCcw,
+  Edit3,
+  UserX,
+  Trash2
 } from 'lucide-react';
 
 interface KartuAksesTableProps {
@@ -39,6 +43,8 @@ interface KartuAksesTableProps {
   onOpenScanner: () => void;
   onOpenImport?: (category?: 'id_cards' | 'hari_h' | 'vouchers') => void;
   onClaimMeal: (cardId: string, meal: 'pagi' | 'siang' | 'malam') => void;
+  onResetActivation?: (cardId: string) => void;
+  onDeleteCard?: (cardId: string) => void;
 }
 
 export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({ 
@@ -51,6 +57,8 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
   onOpenScanner,
   onOpenImport,
   onClaimMeal,
+  onResetActivation,
+  onDeleteCard,
 }) => {
   const [subTab, setSubTab] = useState<'id_cards' | 'monitoring_live' | 'master_pic'>(() => {
     if (typeof window !== 'undefined') {
@@ -65,6 +73,18 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
   const handleSetSubTab = (tab: 'id_cards' | 'monitoring_live' | 'master_pic') => {
     setSubTab(tab);
     localStorage.setItem('hbd_kartu_akses_subtab', tab);
+  };
+
+  const handleConfirmReset = (card: IDCardKonsumsi) => {
+    const confirmed = window.confirm(
+      `Batalkan / hapus data aktivasi untuk ${card.id} (${card.holderName || 'Panitia'})?\n\n` +
+      `• Data nama, nomor kontak, dan area kerja pemegang akan dihapus.\n` +
+      `• Status kartu akan dikembalikan menjadi "Belum Diaktivasi".\n` +
+      `• Kartu ${card.id} dapat langsung diaktivasi ulang oleh pemegang baru.`
+    );
+    if (confirmed && onResetActivation) {
+      onResetActivation(card.id);
+    }
   };
 
   // ID Cards state filters
@@ -573,34 +593,59 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
 
                   {/* Actions */}
                   <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5">
-                    <button
-                      onClick={() => onOpenPrintModal(card.id)}
-                      title="Cetak ID Card Fisik (QR Aktivasi)"
-                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span>Cetak Fisik</span>
-                    </button>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => onOpenPrintModal(card.id)}
+                        title="Cetak ID Card Fisik (QR Aktivasi)"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Cetak Fisik</span>
+                      </button>
 
-                    {isCardActive ? (
-                      <button
-                        onClick={() => onOpenDigitalQrModal(card)}
-                        title="Tampilkan QR Pengambilan Konsumsi Digital (Backup jika ID Card hilang)"
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span>QR Digital (Backup)</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => onOpenActivationModal(card)}
-                        title="Aktivasi ID Card ini sekarang"
-                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition-colors"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Aktivasi Kartu</span>
-                      </button>
-                    )}
+                      {isCardActive && onResetActivation && (
+                        <button
+                          onClick={() => handleConfirmReset(card)}
+                          title="Hapus / Batalkan data aktivasi agar kartu ini bisa diaktivasi ulang"
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Reset / Hapus</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      {isCardActive ? (
+                        <>
+                          <button
+                            onClick={() => onOpenActivationModal(card)}
+                            title="Edit data pemegang atau aktivasi ulang"
+                            className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => onOpenDigitalQrModal(card)}
+                            title="Tampilkan QR Pengambilan Konsumsi Digital (Backup jika ID Card hilang)"
+                            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>QR Digital (Backup)</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => onOpenActivationModal(card)}
+                          title="Aktivasi ID Card ini sekarang"
+                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-2xs transition-colors"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Aktivasi Kartu</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -861,7 +906,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                             <button
                               onClick={() => onOpenDigitalQrModal(card)}
                               title="Lihat Kupon QR Digital"
-                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
+                              className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-[10px] font-bold transition-colors"
                             >
                               <Smartphone className="w-3 h-3" />
                               <span>QR Digital</span>
@@ -870,10 +915,21 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                             <button
                               onClick={() => onOpenPrintModal(card.id)}
                               title="Cetak ID Card Fisik"
-                              className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition-colors"
+                              className="p-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition-colors"
                             >
                               <Printer className="w-3.5 h-3.5" />
                             </button>
+
+                            {onResetActivation && (
+                              <button
+                                onClick={() => handleConfirmReset(card)}
+                                title="Batalkan / Reset aktivasi agar bisa diaktivasi ulang"
+                                className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-[10px] font-bold transition-colors"
+                              >
+                                <RotateCcw className="w-3 h-3 text-rose-600" />
+                                <span>Reset</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

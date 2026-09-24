@@ -382,7 +382,7 @@ export default function App() {
           }
         }
 
-        const cleanCloud = cloudHariH
+        let cleanCloud = cloudHariH
           .filter(
             (g) => !obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal'
           )
@@ -396,6 +396,41 @@ export default function App() {
             return g;
           });
         cleanCloud.sort((a, b) => a.no - b.no);
+
+        // Detect if H-1 was never populated in cloud database (all Panitia MD 1-14 have 0)
+        const allMdZero = cleanCloud
+          .filter((g) => g.no <= 14)
+          .every((g) => (!g.h1SiangQty || g.h1SiangQty === 0) && (!g.h1MalamQty || g.h1MalamQty === 0));
+
+        if (allMdZero && cleanCloud.length > 0) {
+          cleanCloud = cleanCloud.map((g) => {
+            if (g.no <= 14) {
+              return {
+                ...g,
+                h1SiangQty: g.siangQty || 2,
+                h1SiangMenu: g.h1SiangMenu || 'Nasi Ladas',
+                h1SiangStatus: g.h1SiangStatus || 'pending',
+                h1MalamQty: g.malamQty || 2,
+                h1MalamMenu: g.h1MalamMenu || 'Nasi Padang Puti Minang',
+                h1MalamStatus: g.h1MalamStatus || 'pending',
+              };
+            }
+            if (g.no === 64) {
+              return {
+                ...g,
+                h1SiangQty: 5,
+                h1SiangMenu: g.h1SiangMenu || 'Nasi Ladas',
+                h1SiangStatus: g.h1SiangStatus || 'pending',
+                h1MalamQty: 10,
+                h1MalamMenu: g.h1MalamMenu || 'Nasi Padang Puti Minang',
+                h1MalamStatus: g.h1MalamStatus || 'pending',
+              };
+            }
+            return g;
+          });
+          // Background sync default H-1 values to Supabase
+          bulkUpsertHariHToSupabase(cleanCloud);
+        }
 
         setHariHGroups(cleanCloud);
         localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cleanCloud));
@@ -1194,11 +1229,11 @@ export default function App() {
       let defaultH1Siang = g.h1SiangQty || 0;
       let defaultH1Malam = g.h1MalamQty || 0;
       if (g.no <= 14) {
-        defaultH1Siang = (g.h1SiangQty && g.h1SiangQty > 0) ? g.h1SiangQty : (g.siangQty || 2);
-        defaultH1Malam = (g.h1MalamQty && g.h1MalamQty > 0) ? g.h1MalamQty : (g.malamQty || 2);
+        defaultH1Siang = g.siangQty || 2;
+        defaultH1Malam = g.malamQty || 2;
       } else if (g.no === 64) {
-        defaultH1Siang = (g.h1SiangQty && g.h1SiangQty > 0) ? g.h1SiangQty : 5;
-        defaultH1Malam = (g.h1MalamQty && g.h1MalamQty > 0) ? g.h1MalamQty : 10;
+        defaultH1Siang = 5;
+        defaultH1Malam = 10;
       }
       return {
         ...g,

@@ -175,6 +175,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       totalTarget: 100,
       badge: 'Non-Voucher',
       color: 'bg-amber-600 text-white',
+      isActivatedSlot: true,
     },
     {
       key: 'h1_malam' as const,
@@ -184,6 +185,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       totalTarget: 140,
       badge: 'Non-Voucher',
       color: 'bg-amber-700 text-white',
+      isActivatedSlot: true,
     },
     {
       key: 'pagi' as const,
@@ -213,7 +215,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       totalTarget: 359,
       badge: '359 Porsi',
       color: 'bg-rose-600 text-white',
-      isActivatedSlot: false,
+      isActivatedSlot: true,
     },
     {
       key: 'snack_siang' as const,
@@ -233,7 +235,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       totalTarget: 224,
       badge: '224+ Btl',
       color: 'bg-blue-600 text-white',
-      isActivatedSlot: false,
+      isActivatedSlot: true,
     },
     {
       key: 'malam' as const,
@@ -628,8 +630,8 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                 Rincian Menu &amp; Porsi Pada Sesi Ini:
               </h3>
-              {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (() => {
-                const count = getActivatedCountForSlot(selectedSlot as MealTimeSlot);
+              {(() => {
+                const count = getActivatedCountForSlot(selectedSlot);
                 if (count === 0) return null;
                 return (
                   <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-bold shadow-2xs">
@@ -868,7 +870,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                           }`}>
                             {group.category}
                           </span>
-                          {['pagi', 'snack_pagi', 'snack_siang', 'malam'].includes(selectedSlot) && (() => {
+                          {(() => {
                             const act = isGroupActivatedByIdCards(group, idCards);
                             if (!act.isActivated) return null;
                             return (

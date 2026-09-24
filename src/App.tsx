@@ -644,7 +644,7 @@ export default function App() {
     }
   };
 
-  const handleConfirmModal = async (receiverName: string, note: string) => {
+  const handleConfirmModal = async (receiverName: string, proofPhoto?: string) => {
     const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const targetGroupId = modalData.groupId;
     const targetSlot = modalData.slot;
@@ -655,15 +655,40 @@ export default function App() {
         if (g.id !== targetGroupId) return g;
         const updated = { ...g };
 
-        if (targetSlot === 'pagi') { updated.pagiStatus = 'completed'; updated.pagiPickedAt = timeStr; updated.pagiReceiver = receiverName; }
-        else if (targetSlot === 'snack_pagi') { updated.snackPagiStatus = 'completed'; updated.snackPagiPickedAt = timeStr; updated.snackPagiReceiver = receiverName; }
-        else if (targetSlot === 'siang') { updated.siangStatus = 'completed'; updated.siangPickedAt = timeStr; updated.siangReceiver = receiverName; }
-        else if (targetSlot === 'snack_siang') { updated.snackSiangStatus = 'completed'; updated.snackSiangPickedAt = timeStr; updated.snackSiangReceiver = receiverName; }
-        else if (targetSlot === 'minuman') { updated.minumanStatus = 'completed'; updated.minumanPickedAt = timeStr; updated.minumanReceiver = receiverName; }
-        else if (targetSlot === 'malam') { updated.malamStatus = 'completed'; updated.malamPickedAt = timeStr; updated.malamReceiver = receiverName; }
+        if (targetSlot === 'pagi') { 
+          updated.pagiStatus = 'completed'; 
+          updated.pagiPickedAt = timeStr; 
+          updated.pagiReceiver = receiverName; 
+          updated.pagiProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'snack_pagi') { 
+          updated.snackPagiStatus = 'completed'; 
+          updated.snackPagiPickedAt = timeStr; 
+          updated.snackPagiReceiver = receiverName; 
+          updated.snackPagiProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'siang') { 
+          updated.siangStatus = 'completed'; 
+          updated.siangPickedAt = timeStr; 
+          updated.siangReceiver = receiverName; 
+          updated.siangProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'snack_siang') { 
+          updated.snackSiangStatus = 'completed'; 
+          updated.snackSiangPickedAt = timeStr; 
+          updated.snackSiangReceiver = receiverName; 
+          updated.snackSiangProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'minuman') { 
+          updated.minumanStatus = 'completed'; 
+          updated.minumanPickedAt = timeStr; 
+          updated.minumanReceiver = receiverName; 
+          updated.minumanProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'malam') { 
+          updated.malamStatus = 'completed'; 
+          updated.malamPickedAt = timeStr; 
+          updated.malamReceiver = receiverName; 
+          updated.malamProofPhoto = proofPhoto; 
+        }
 
-        if (note) {
-          updated.notes = updated.notes ? `${updated.notes} | ${note}` : note;
+        if (proofPhoto) {
+          updated.proofPhoto = proofPhoto;
         }
         return updated;
       });
@@ -678,7 +703,7 @@ export default function App() {
         'completed',
         timeStr,
         receiverName,
-        note,
+        undefined,
         targetGroup?.no
       );
       if (!res.success && isSupabaseConfigured()) {

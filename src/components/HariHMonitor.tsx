@@ -22,7 +22,11 @@ import {
   QrCode,
   Sparkles,
   Upload,
-  Users
+  Users,
+  Camera,
+  Eye,
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
 import { getBarcodeForSlot, getBarcodeForGroupGeneral } from '../utils/barcodeUtils';
 
@@ -73,6 +77,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Internal' | 'Eksternal' | 'Buffer'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [selectedMenuFilter, setSelectedMenuFilter] = useState<string>('all');
+  const [viewingPhoto, setViewingPhoto] = useState<{ url: string; title: string; subtitle: string } | null>(null);
 
   // Slot definitions with details
   const TIME_SLOTS = [
@@ -149,6 +154,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.pagiStatus,
           pickedAt: group.pagiPickedAt,
           receiver: group.pagiReceiver,
+          proofPhoto: group.pagiProofPhoto || group.proofPhoto,
         };
       case 'snack_pagi':
         return {
@@ -157,6 +163,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.snackPagiStatus,
           pickedAt: group.snackPagiPickedAt,
           receiver: group.snackPagiReceiver,
+          proofPhoto: group.snackPagiProofPhoto,
         };
       case 'siang':
         return {
@@ -165,6 +172,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.siangStatus,
           pickedAt: group.siangPickedAt,
           receiver: group.siangReceiver,
+          proofPhoto: group.siangProofPhoto || group.proofPhoto,
         };
       case 'snack_siang':
         return {
@@ -173,6 +181,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.snackSiangStatus,
           pickedAt: group.snackSiangPickedAt,
           receiver: group.snackSiangReceiver,
+          proofPhoto: group.snackSiangProofPhoto,
         };
       case 'minuman':
         return {
@@ -181,6 +190,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.minumanStatus,
           pickedAt: group.minumanPickedAt,
           receiver: group.minumanReceiver,
+          proofPhoto: group.minumanProofPhoto,
         };
       case 'malam':
         return {
@@ -189,6 +199,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           status: group.malamStatus,
           pickedAt: group.malamPickedAt,
           receiver: group.malamReceiver,
+          proofPhoto: group.malamProofPhoto || group.proofPhoto,
         };
     }
   };
@@ -761,14 +772,32 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                         </span>
                       </div>
                       {slotData.pickedAt && (
-                        <div className="text-[10px] text-emerald-700 font-medium mt-1">
-                          Diambil jam: {slotData.pickedAt} {slotData.receiver ? `(${slotData.receiver})` : ''}
+                        <div className="text-[10px] text-emerald-700 font-medium mt-1 flex items-center justify-between gap-1">
+                          <span>Diambil jam: {slotData.pickedAt} {slotData.receiver ? `(${slotData.receiver})` : ''}</span>
                         </div>
                       )}
                     </div>
 
                     {/* Right: Actions */}
                     <div className="flex items-center space-x-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      {/* Bukti Foto Button (if exists) */}
+                      {slotData.proofPhoto && (
+                        <button
+                          onClick={() =>
+                            setViewingPhoto({
+                              url: slotData.proofPhoto!,
+                              title: `${group.groupName} - Sesi ${slotData.menu}`,
+                              subtitle: `Diambil oleh ${slotData.receiver || group.picName} pada ${slotData.pickedAt || 'Hari H'}`,
+                            })
+                          }
+                          title="Lihat Bukti Foto Pengambilan"
+                          className="inline-flex items-center space-x-1 px-2.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-300 transition-colors shadow-2xs"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="hidden sm:inline">Bukti Foto</span>
+                        </button>
+                      )}
+
                       {/* Kupon / Barcode Card Button */}
                       <button
                         onClick={() =>
@@ -1024,6 +1053,58 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
           })
         )}
       </div>
+
+      {/* Lightbox / Modal Bukti Foto Pengambilan */}
+      {viewingPhoto && (
+        <div 
+          className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setViewingPhoto(null)}
+        >
+          <div 
+            className="max-w-lg w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3.5 bg-slate-800 flex items-center justify-between border-b border-slate-700 text-white">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold">{viewingPhoto.title}</h4>
+                  <p className="text-[10px] text-slate-400">{viewingPhoto.subtitle}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingPhoto(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 flex items-center justify-center max-h-[75vh] bg-black">
+              <img
+                src={viewingPhoto.url}
+                alt="Bukti Foto Pengambilan"
+                className="max-h-[70vh] w-auto object-contain rounded-lg shadow-inner"
+              />
+            </div>
+            <div className="p-3 bg-slate-800 text-center flex items-center justify-between text-xs text-slate-400">
+              <span className="text-[11px] text-emerald-400 font-semibold flex items-center space-x-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Dokumentasi Resmi Pos Konsumsi</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setViewingPhoto(null)}
+                className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

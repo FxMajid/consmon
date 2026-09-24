@@ -27,6 +27,7 @@ export interface HariHGroupDistribution {
   pagiStatus: 'pending' | 'completed' | 'partial';
   pagiPickedAt?: string;
   pagiReceiver?: string;
+  pagiProofPhoto?: string;
   
   // Snack Pagi (09.30) - Roti Kamura
   snackPagiQty: number;
@@ -34,6 +35,7 @@ export interface HariHGroupDistribution {
   snackPagiStatus: 'pending' | 'completed' | 'partial';
   snackPagiPickedAt?: string;
   snackPagiReceiver?: string;
+  snackPagiProofPhoto?: string;
 
   // Siang (11.30) - Bebek Belur / Nasi Ayam Bu Ani
   siangQty: number;
@@ -41,6 +43,7 @@ export interface HariHGroupDistribution {
   siangStatus: 'pending' | 'completed' | 'partial';
   siangPickedAt?: string;
   siangReceiver?: string;
+  siangProofPhoto?: string;
 
   // Snack Siang/Sore (15.00) - Umurais / Kue Buani
   snackSiangQty: number;
@@ -48,6 +51,7 @@ export interface HariHGroupDistribution {
   snackSiangStatus: 'pending' | 'completed' | 'partial';
   snackSiangPickedAt?: string;
   snackSiangReceiver?: string;
+  snackSiangProofPhoto?: string;
 
   // Minuman (11.30 / 15.00 / All time) - Iso Plus / Mineral
   minumanQty: number;
@@ -55,6 +59,7 @@ export interface HariHGroupDistribution {
   minumanStatus: 'pending' | 'completed' | 'partial';
   minumanPickedAt?: string;
   minumanReceiver?: string;
+  minumanProofPhoto?: string;
 
   // Malam (17.30) - Ayam Penyet Surabaya / Mbok Jum / Puti Minang
   malamQty: number;
@@ -62,10 +67,12 @@ export interface HariHGroupDistribution {
   malamStatus: 'pending' | 'completed' | 'partial';
   malamPickedAt?: string;
   malamReceiver?: string;
+  malamProofPhoto?: string;
 
   totalAmount: number;
   notes?: string;
   members?: string; // Daftar nama anggota yang makanannya diambil oleh PIC
+  proofPhoto?: string; // Foto bukti pengambilan terakhir
 }
 
 export interface VoucherDistributionItem {

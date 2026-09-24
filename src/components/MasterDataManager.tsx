@@ -143,6 +143,12 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
       picName: '',
       picPhone: '',
       category: nextNo >= 40 ? (nextNo === 64 ? 'Buffer' : 'Eksternal') : 'Internal',
+      h1SiangQty: 0,
+      h1SiangMenu: 'Nasi Ladas',
+      h1SiangStatus: 'pending',
+      h1MalamQty: 0,
+      h1MalamMenu: 'Nasi Padang Puti Minang',
+      h1MalamStatus: 'pending',
       pagiQty: 0,
       pagiMenu: 'Nasi Uduk Eyang Rita',
       pagiStatus: 'pending',
@@ -169,7 +175,15 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
   };
 
   const handleOpenHariHEdit = (group: HariHGroupDistribution) => {
-    setEditingHariH({ ...group });
+    setEditingHariH({
+      ...group,
+      h1SiangQty: group.h1SiangQty ?? 0,
+      h1SiangMenu: group.h1SiangMenu || 'Nasi Ladas',
+      h1SiangStatus: group.h1SiangStatus || 'pending',
+      h1MalamQty: group.h1MalamQty ?? 0,
+      h1MalamMenu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
+      h1MalamStatus: group.h1MalamStatus || 'pending',
+    });
     setIsNewHariH(false);
     setHariHModalOpen(true);
   };
@@ -738,29 +752,35 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3 px-3 w-12 text-center">No</th>
-                    <th className="py-3 px-3 min-w-[200px]">Kelompok / Divisi</th>
-                    <th className="py-3 px-3 min-w-[140px]">PIC &amp; Kontak</th>
-                    <th className="py-3 px-3 min-w-[180px]">Anggota PIC</th>
+                    <th className="py-3 px-3 min-w-[190px]">Kelompok / Divisi</th>
+                    <th className="py-3 px-3 min-w-[130px]">PIC &amp; Kontak</th>
+                    <th className="py-3 px-3 min-w-[170px]">Anggota PIC</th>
                     <th className="py-3 px-3 text-center">Kategori</th>
-                    <th className="py-3 px-3 text-center">Pagi</th>
-                    <th className="py-3 px-3 text-center">Snk Pagi</th>
-                    <th className="py-3 px-3 text-center">Siang</th>
-                    <th className="py-3 px-3 text-center">Snk Sore</th>
-                    <th className="py-3 px-3 text-center">Minum</th>
-                    <th className="py-3 px-3 text-center">Malam</th>
+                    <th className="py-3 px-2 text-center bg-amber-50/80 text-amber-800 border-x border-amber-200/60" title="Alokasi Makan Siang H-1 (Non-Voucher)">
+                      H-1 Siang
+                    </th>
+                    <th className="py-3 px-2 text-center bg-amber-50/80 text-amber-800 border-r border-amber-200/60" title="Alokasi Makan Malam H-1 (Non-Voucher)">
+                      H-1 Malam
+                    </th>
+                    <th className="py-3 px-2 text-center">Pagi</th>
+                    <th className="py-3 px-2 text-center">Snk Pagi</th>
+                    <th className="py-3 px-2 text-center">Siang</th>
+                    <th className="py-3 px-2 text-center">Snk Sore</th>
+                    <th className="py-3 px-2 text-center">Minum</th>
+                    <th className="py-3 px-2 text-center">Malam</th>
                     <th className="py-3 px-3 text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredHariH.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-slate-400">
+                      <td colSpan={14} className="py-8 text-center text-slate-400">
                         Tidak ada data yang sesuai filter / pencarian.
                       </td>
                     </tr>
                   ) : (
                     filteredHariH.map((group) => {
-                      const totalPorsi = (group.pagiQty || 0) + (group.snackPagiQty || 0) + (group.siangQty || 0) + (group.snackSiangQty || 0) + (group.minumanQty || 0) + (group.malamQty || 0);
+                      const totalPorsi = (group.h1SiangQty || 0) + (group.h1MalamQty || 0) + (group.pagiQty || 0) + (group.snackPagiQty || 0) + (group.siangQty || 0) + (group.snackSiangQty || 0) + (group.minumanQty || 0) + (group.malamQty || 0);
                       const membersList = group.members || (group.notes && group.notes.toLowerCase().includes('anggota') ? group.notes.replace(/^Anggota:\s*/i, '') : undefined);
                       return (
                         <tr key={group.id} className="hover:bg-slate-50/70 transition-colors">
@@ -782,7 +802,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                               {group.picPhone || '-'}
                             </div>
                           </td>
-                          <td className="py-3 px-3 min-w-[180px]">
+                          <td className="py-3 px-3 min-w-[170px]">
                             {membersList ? (
                               <div className="text-[11px] text-blue-900 bg-blue-50/80 px-2 py-1 rounded-lg border border-blue-200/80 flex items-start gap-1.5" title={membersList}>
                                 <Users className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
@@ -801,6 +821,18 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                                 : 'bg-teal-50 text-teal-700 border border-teal-200'
                             }`}>
                               {group.category}
+                            </span>
+                          </td>
+                          {/* H-1 Siang */}
+                          <td className="py-3 px-2 text-center bg-amber-50/40 border-x border-amber-100">
+                            <span className={`font-bold ${((group.h1SiangQty || 0) > 0) ? 'text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded' : 'text-slate-300'}`}>
+                              {group.h1SiangQty || 0}
+                            </span>
+                          </td>
+                          {/* H-1 Malam */}
+                          <td className="py-3 px-2 text-center bg-amber-50/40 border-r border-amber-100">
+                            <span className={`font-bold ${((group.h1MalamQty || 0) > 0) ? 'text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded' : 'text-slate-300'}`}>
+                              {group.h1MalamQty || 0}
                             </span>
                           </td>
                           <td className="py-3 px-2 text-center">
@@ -1450,6 +1482,59 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
 
               {/* Meal Slots Configuration */}
               <div className="pt-2 border-t border-slate-200">
+                {/* H-1 Non-Voucher Slots */}
+                <div className="mb-3">
+                  <h4 className="font-bold text-amber-900 text-xs mb-1.5 flex items-center gap-1.5 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/70">
+                    <Utensils className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Alokasi Distribusi Langsung Fase H-1 (Non-Voucher)</span>
+                    <span className="text-[10px] font-normal text-amber-700 ml-auto">Gladi Bersih &amp; Loading</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-amber-50/40 p-3 rounded-xl border border-amber-200/60">
+                    {/* H-1 Siang */}
+                    <div>
+                      <label className="block font-semibold text-amber-950 text-[11px] mb-0.5">Porsi H-1 Makan Siang (11.30)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editingHariH.h1SiangQty ?? 0}
+                          onChange={(e) => setEditingHariH({ ...editingHariH, h1SiangQty: parseInt(e.target.value) || 0 })}
+                          className="w-20 px-2 py-1.5 rounded-lg border border-amber-300 font-bold text-center bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={editingHariH.h1SiangMenu || ''}
+                          onChange={(e) => setEditingHariH({ ...editingHariH, h1SiangMenu: e.target.value })}
+                          placeholder="Menu H-1 Siang (misal: Nasi Ladas)"
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-amber-300 text-slate-800 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* H-1 Malam */}
+                    <div>
+                      <label className="block font-semibold text-amber-950 text-[11px] mb-0.5">Porsi H-1 Makan Malam (17.30)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editingHariH.h1MalamQty ?? 0}
+                          onChange={(e) => setEditingHariH({ ...editingHariH, h1MalamQty: parseInt(e.target.value) || 0 })}
+                          className="w-20 px-2 py-1.5 rounded-lg border border-amber-300 font-bold text-center bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={editingHariH.h1MalamMenu || ''}
+                          onChange={(e) => setEditingHariH({ ...editingHariH, h1MalamMenu: e.target.value })}
+                          placeholder="Menu H-1 Malam (misal: Nasi Padang Puti Minang)"
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-amber-300 text-slate-800 bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <h4 className="font-bold text-slate-800 text-xs mb-2 flex items-center gap-1.5">
                   <Utensils className="w-4 h-4 text-red-600" />
                   Alokasi Porsi &amp; Menu Setiap Sesi Waktu (Hari H)

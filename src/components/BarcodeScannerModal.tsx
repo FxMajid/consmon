@@ -94,13 +94,15 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     const cleanText = decodedText.trim().toUpperCase();
 
     // 1. Check if format is HBD-H-{no}-{slot}
-    // e.g. HBD-H-01-SIANG or HBD-H-1-PAGI
-    const hariHMatch = cleanText.match(/^HBD-H-(\d+)-(PAGI|SNACKPAGI|SIANG|SNACKSIANG|MINUM|MALAM)$/i);
+    // e.g. HBD-H-01-SIANG, HBD-H-01-H1SIANG, HBD-H-1-PAGI
+    const hariHMatch = cleanText.match(/^HBD-H-(\d+)-(H1SIANG|H1MALAM|PAGI|SNACKPAGI|SIANG|SNACKSIANG|MINUM|MALAM)$/i);
     if (hariHMatch) {
       const groupNo = parseInt(hariHMatch[1], 10);
       const slotCode = hariHMatch[2].toUpperCase();
       let matchedSlot: MealTimeSlot = 'siang';
-      if (slotCode === 'PAGI') matchedSlot = 'pagi';
+      if (slotCode === 'H1SIANG') matchedSlot = 'h1_siang';
+      else if (slotCode === 'H1MALAM') matchedSlot = 'h1_malam';
+      else if (slotCode === 'PAGI') matchedSlot = 'pagi';
       else if (slotCode === 'SNACKPAGI') matchedSlot = 'snack_pagi';
       else if (slotCode === 'SIANG') matchedSlot = 'siang';
       else if (slotCode === 'SNACKSIANG') matchedSlot = 'snack_siang';
@@ -257,7 +259,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     let pickedAt: string | undefined;
     let receiver: string | undefined;
 
-    if (slot === 'pagi') { qty = group.pagiQty; menu = group.pagiMenu; status = group.pagiStatus; pickedAt = group.pagiPickedAt; receiver = group.pagiReceiver; }
+    if (slot === 'h1_siang') { qty = group.h1SiangQty || 0; menu = group.h1SiangMenu || 'Nasi Ladas'; status = group.h1SiangStatus || 'pending'; pickedAt = group.h1SiangPickedAt; receiver = group.h1SiangReceiver; }
+    else if (slot === 'h1_malam') { qty = group.h1MalamQty || 0; menu = group.h1MalamMenu || 'Nasi Padang Puti Minang'; status = group.h1MalamStatus || 'pending'; pickedAt = group.h1MalamPickedAt; receiver = group.h1MalamReceiver; }
+    else if (slot === 'pagi') { qty = group.pagiQty; menu = group.pagiMenu; status = group.pagiStatus; pickedAt = group.pagiPickedAt; receiver = group.pagiReceiver; }
     else if (slot === 'snack_pagi') { qty = group.snackPagiQty; menu = group.snackPagiMenu; status = group.snackPagiStatus; pickedAt = group.snackPagiPickedAt; receiver = group.snackPagiReceiver; }
     else if (slot === 'siang') { qty = group.siangQty; menu = group.siangMenu; status = group.siangStatus; pickedAt = group.siangPickedAt; receiver = group.siangReceiver; }
     else if (slot === 'snack_siang') { qty = group.snackSiangQty; menu = group.snackSiangMenu; status = group.snackSiangStatus; pickedAt = group.snackSiangPickedAt; receiver = group.snackSiangReceiver; }
@@ -423,6 +427,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               onChange={(e) => setScanSlot(e.target.value as MealTimeSlot)}
               className="px-2 py-1 rounded-lg border border-slate-300 font-bold text-red-700 bg-white"
             >
+              <option value="h1_siang">11.30 H-1 Siang</option>
+              <option value="h1_malam">17.30 H-1 Malam</option>
               <option value="pagi">06.30 Pagi (Sarapan)</option>
               <option value="snack_pagi">09.30 Snack Pagi</option>
               <option value="siang">11.30 Makan Siang</option>

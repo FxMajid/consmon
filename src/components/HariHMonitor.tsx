@@ -84,9 +84,27 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
     {
       key: 'all' as const,
       label: 'Semua Sesi',
-      time: 'Hari H Lengkap',
+      time: 'H-1 & Hari H Lengkap',
       badge: 'Overview',
       color: 'bg-slate-800 text-white',
+    },
+    {
+      key: 'h1_siang' as const,
+      label: 'H-1 Siang',
+      time: '11.30 WIB (H-1)',
+      menuPrimary: 'Nasi Ladas / Puti Minang',
+      totalTarget: 100,
+      badge: 'Non-Voucher',
+      color: 'bg-amber-600 text-white',
+    },
+    {
+      key: 'h1_malam' as const,
+      label: 'H-1 Malam',
+      time: '17.30 WIB (H-1)',
+      menuPrimary: 'Nasi Padang Puti Minang',
+      totalTarget: 140,
+      badge: 'Non-Voucher',
+      color: 'bg-amber-700 text-white',
     },
     {
       key: 'pagi' as const,
@@ -104,7 +122,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       menuPrimary: 'Roti Kamura (Rp 11.000)',
       totalTarget: 178,
       badge: '178 Porsi',
-      color: 'bg-amber-600 text-white',
+      color: 'bg-amber-500 text-white',
     },
     {
       key: 'siang' as const,
@@ -147,6 +165,24 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
   // Helper to extract slot info for a group
   const getSlotInfo = (group: HariHGroupDistribution, slot: MealTimeSlot) => {
     switch (slot) {
+      case 'h1_siang':
+        return {
+          qty: group.h1SiangQty || 0,
+          menu: group.h1SiangMenu || 'Nasi Ladas',
+          status: group.h1SiangStatus || 'pending',
+          pickedAt: group.h1SiangPickedAt,
+          receiver: group.h1SiangReceiver,
+          proofPhoto: group.h1SiangProofPhoto,
+        };
+      case 'h1_malam':
+        return {
+          qty: group.h1MalamQty || 0,
+          menu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
+          status: group.h1MalamStatus || 'pending',
+          pickedAt: group.h1MalamPickedAt,
+          receiver: group.h1MalamReceiver,
+          proofPhoto: group.h1MalamProofPhoto,
+        };
       case 'pagi':
         return {
           qty: group.pagiQty,
@@ -251,7 +287,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
       let totalPorsi = 0;
       let totalDiambil = 0;
       groups.forEach((g) => {
-        const slots: MealTimeSlot[] = ['pagi', 'snack_pagi', 'siang', 'snack_siang', 'minuman', 'malam'];
+        const slots: MealTimeSlot[] = ['h1_siang', 'h1_malam', 'pagi', 'snack_pagi', 'siang', 'snack_siang', 'minuman', 'malam'];
         slots.forEach((s) => {
           const info = getSlotInfo(g, s);
           totalPorsi += info.qty;
@@ -903,7 +939,55 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                 </div>
 
                 {/* Slots Matrix for this group */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-3 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mt-3 text-xs">
+                  {/* H-1 Siang */}
+                  <div className={`p-2.5 rounded-lg border ${
+                    (group.h1SiangQty || 0) === 0 
+                      ? 'bg-slate-50/50 border-slate-100 text-slate-400' 
+                      : group.h1SiangStatus === 'completed'
+                      ? 'bg-emerald-50/60 border-emerald-200'
+                      : 'bg-amber-50/40 border-amber-200/80'
+                  }`}>
+                    <div className="text-[10px] font-bold text-amber-800 uppercase flex justify-between">
+                      <span>H-1 Siang</span>
+                      {(group.h1SiangQty || 0) > 0 && (
+                        <span className={group.h1SiangStatus === 'completed' ? 'text-emerald-700 font-bold' : 'text-amber-700'}>
+                          {group.h1SiangStatus === 'completed' ? '✓' : '...'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-semibold text-slate-800 text-[11px] mt-1 truncate" title={group.h1SiangMenu || 'Nasi Ladas'}>
+                      {(group.h1SiangQty || 0) > 0 ? (group.h1SiangMenu || 'Nasi Ladas') : '-'}
+                    </div>
+                    <div className="text-[11px] font-bold text-amber-700 mt-0.5">
+                      {(group.h1SiangQty || 0) > 0 ? `${group.h1SiangQty} Porsi` : '-'}
+                    </div>
+                  </div>
+
+                  {/* H-1 Malam */}
+                  <div className={`p-2.5 rounded-lg border ${
+                    (group.h1MalamQty || 0) === 0 
+                      ? 'bg-slate-50/50 border-slate-100 text-slate-400' 
+                      : group.h1MalamStatus === 'completed'
+                      ? 'bg-emerald-50/60 border-emerald-200'
+                      : 'bg-amber-50/40 border-amber-200/80'
+                  }`}>
+                    <div className="text-[10px] font-bold text-amber-800 uppercase flex justify-between">
+                      <span>H-1 Malam</span>
+                      {(group.h1MalamQty || 0) > 0 && (
+                        <span className={group.h1MalamStatus === 'completed' ? 'text-emerald-700 font-bold' : 'text-amber-700'}>
+                          {group.h1MalamStatus === 'completed' ? '✓' : '...'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-semibold text-slate-800 text-[11px] mt-1 truncate" title={group.h1MalamMenu || 'Puti Minang'}>
+                      {(group.h1MalamQty || 0) > 0 ? (group.h1MalamMenu || 'Puti Minang') : '-'}
+                    </div>
+                    <div className="text-[11px] font-bold text-amber-700 mt-0.5">
+                      {(group.h1MalamQty || 0) > 0 ? `${group.h1MalamQty} Porsi` : '-'}
+                    </div>
+                  </div>
+
                   {/* Pagi */}
                   <div className={`p-2.5 rounded-lg border ${
                     group.pagiQty === 0 

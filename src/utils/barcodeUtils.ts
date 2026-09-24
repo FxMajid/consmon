@@ -51,6 +51,8 @@ export const playBeepWarning = () => {
 // Generate barcode code format
 export const getBarcodeForSlot = (groupNo: number, slot: MealTimeSlot): string => {
   const slotCode = 
+    slot === 'h1_siang' ? 'H1SIANG' :
+    slot === 'h1_malam' ? 'H1MALAM' :
     slot === 'pagi' ? 'PAGI' :
     slot === 'snack_pagi' ? 'SNACKPAGI' :
     slot === 'siang' ? 'SIANG' :

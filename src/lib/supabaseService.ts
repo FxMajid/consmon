@@ -186,6 +186,16 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
         picName: r.pic_name,
         picPhone: r.pic_phone || '',
         category: cat,
+        h1SiangQty: r.h1_siang_qty || (r.no <= 14 ? (r.siang_qty || 2) : (r.no === 64 ? 5 : 0)),
+        h1SiangMenu: r.h1_siang_menu || 'Nasi Ladas',
+        h1SiangStatus: r.h1_siang_status || 'pending',
+        h1SiangPickedAt: r.h1_siang_picked_at || undefined,
+        h1SiangReceiver: r.h1_siang_receiver || undefined,
+        h1MalamQty: r.h1_malam_qty || (r.no <= 14 ? (r.malam_qty || 2) : (r.no === 64 ? 10 : 0)),
+        h1MalamMenu: r.h1_malam_menu || 'Nasi Padang Puti Minang',
+        h1MalamStatus: r.h1_malam_status || 'pending',
+        h1MalamPickedAt: r.h1_malam_picked_at || undefined,
+        h1MalamReceiver: r.h1_malam_receiver || undefined,
         pagiQty: r.pagi_qty || 0,
         pagiMenu: r.pagi_menu || '',
         pagiStatus: r.pagi_status || 'pending',
@@ -244,7 +254,15 @@ export async function updateHariHSlotInSupabase(
       updated_at: new Date().toISOString(),
     };
 
-    if (slot === 'pagi') {
+    if (slot === 'h1_siang') {
+      updateData.h1_siang_status = status;
+      updateData.h1_siang_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.h1_siang_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'h1_malam') {
+      updateData.h1_malam_status = status;
+      updateData.h1_malam_picked_at = status === 'completed' ? (pickedAt || null) : null;
+      updateData.h1_malam_receiver = status === 'completed' ? (receiver || null) : null;
+    } else if (slot === 'pagi') {
       updateData.pagi_status = status;
       updateData.pagi_picked_at = status === 'completed' ? (pickedAt || null) : null;
       updateData.pagi_receiver = status === 'completed' ? (receiver || null) : null;
@@ -377,6 +395,16 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       pic_name: group.picName,
       pic_phone: group.picPhone || null,
       category: category,
+      h1_siang_qty: group.h1SiangQty || 0,
+      h1_siang_menu: group.h1SiangMenu || '',
+      h1_siang_status: group.h1SiangStatus || 'pending',
+      h1_siang_picked_at: group.h1SiangPickedAt || null,
+      h1_siang_receiver: group.h1SiangReceiver || null,
+      h1_malam_qty: group.h1MalamQty || 0,
+      h1_malam_menu: group.h1MalamMenu || '',
+      h1_malam_status: group.h1MalamStatus || 'pending',
+      h1_malam_picked_at: group.h1MalamPickedAt || null,
+      h1_malam_receiver: group.h1MalamReceiver || null,
       pagi_qty: group.pagiQty,
       pagi_menu: group.pagiMenu,
       pagi_status: group.pagiStatus,
@@ -490,6 +518,16 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
         pic_name: group.picName,
         pic_phone: group.picPhone || null,
         category: category,
+        h1_siang_qty: group.h1SiangQty || 0,
+        h1_siang_menu: group.h1SiangMenu || '',
+        h1_siang_status: group.h1SiangStatus || 'pending',
+        h1_siang_picked_at: group.h1SiangPickedAt || null,
+        h1_siang_receiver: group.h1SiangReceiver || null,
+        h1_malam_qty: group.h1MalamQty || 0,
+        h1_malam_menu: group.h1MalamMenu || '',
+        h1_malam_status: group.h1MalamStatus || 'pending',
+        h1_malam_picked_at: group.h1MalamPickedAt || null,
+        h1_malam_receiver: group.h1MalamReceiver || null,
         pagi_qty: group.pagiQty,
         pagi_menu: group.pagiMenu,
         pagi_status: group.pagiStatus,

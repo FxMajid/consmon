@@ -594,7 +594,9 @@ export default function App() {
         const next = prev.map((g) => {
           if (g.id !== groupId) return g;
           const updated = { ...g };
-          if (slot === 'pagi') { updated.pagiStatus = 'pending'; updated.pagiPickedAt = undefined; updated.pagiReceiver = undefined; }
+          if (slot === 'h1_siang') { updated.h1SiangStatus = 'pending'; updated.h1SiangPickedAt = undefined; updated.h1SiangReceiver = undefined; }
+          else if (slot === 'h1_malam') { updated.h1MalamStatus = 'pending'; updated.h1MalamPickedAt = undefined; updated.h1MalamReceiver = undefined; }
+          else if (slot === 'pagi') { updated.pagiStatus = 'pending'; updated.pagiPickedAt = undefined; updated.pagiReceiver = undefined; }
           else if (slot === 'snack_pagi') { updated.snackPagiStatus = 'pending'; updated.snackPagiPickedAt = undefined; updated.snackPagiReceiver = undefined; }
           else if (slot === 'siang') { updated.siangStatus = 'pending'; updated.siangPickedAt = undefined; updated.siangReceiver = undefined; }
           else if (slot === 'snack_siang') { updated.snackSiangStatus = 'pending'; updated.snackSiangPickedAt = undefined; updated.snackSiangReceiver = undefined; }
@@ -623,7 +625,9 @@ export default function App() {
       let qty = 0;
       let timeSlotLabel = '';
 
-      if (slot === 'pagi') { menu = group.pagiMenu; qty = group.pagiQty; timeSlotLabel = '06.30 Pagi (Sarapan)'; }
+      if (slot === 'h1_siang') { menu = group.h1SiangMenu || 'Nasi Ladas'; qty = group.h1SiangQty || 0; timeSlotLabel = '11.30 Makan Siang H-1'; }
+      else if (slot === 'h1_malam') { menu = group.h1MalamMenu || 'Nasi Padang Puti Minang'; qty = group.h1MalamQty || 0; timeSlotLabel = '17.30 Makan Malam H-1'; }
+      else if (slot === 'pagi') { menu = group.pagiMenu; qty = group.pagiQty; timeSlotLabel = '06.30 Pagi (Sarapan)'; }
       else if (slot === 'snack_pagi') { menu = group.snackPagiMenu; qty = group.snackPagiQty; timeSlotLabel = '09.30 Snack Pagi'; }
       else if (slot === 'siang') { menu = group.siangMenu; qty = group.siangQty; timeSlotLabel = '11.30 Makan Siang'; }
       else if (slot === 'snack_siang') { menu = group.snackSiangMenu; qty = group.snackSiangQty; timeSlotLabel = '15.00 Snack Sore'; }
@@ -655,7 +659,17 @@ export default function App() {
         if (g.id !== targetGroupId) return g;
         const updated = { ...g };
 
-        if (targetSlot === 'pagi') { 
+        if (targetSlot === 'h1_siang') { 
+          updated.h1SiangStatus = 'completed'; 
+          updated.h1SiangPickedAt = timeStr; 
+          updated.h1SiangReceiver = receiverName; 
+          updated.h1SiangProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'h1_malam') { 
+          updated.h1MalamStatus = 'completed'; 
+          updated.h1MalamPickedAt = timeStr; 
+          updated.h1MalamReceiver = receiverName; 
+          updated.h1MalamProofPhoto = proofPhoto; 
+        } else if (targetSlot === 'pagi') { 
           updated.pagiStatus = 'completed'; 
           updated.pagiPickedAt = timeStr; 
           updated.pagiReceiver = receiverName; 

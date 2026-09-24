@@ -1,6 +1,6 @@
 export type ActiveDay = 'H' | 'H-1' | 'H-2' | 'H+1' | 'ALL';
 
-export type MealTimeSlot = 'pagi' | 'snack_pagi' | 'siang' | 'snack_siang' | 'minuman' | 'malam';
+export type MealTimeSlot = 'h1_siang' | 'h1_malam' | 'pagi' | 'snack_pagi' | 'siang' | 'snack_siang' | 'minuman' | 'malam';
 
 export interface MenuDetail {
   id: string;
@@ -21,6 +21,22 @@ export interface HariHGroupDistribution {
   picPhone: string;
   category: 'Internal' | 'Eksternal' | 'Buffer';
   
+  // H-1 Siang (11.30 H-1) - Nasi Ladas / Puti Minang
+  h1SiangQty?: number;
+  h1SiangMenu?: string;
+  h1SiangStatus?: 'pending' | 'completed' | 'partial';
+  h1SiangPickedAt?: string;
+  h1SiangReceiver?: string;
+  h1SiangProofPhoto?: string;
+
+  // H-1 Malam (17.30 H-1) - Nasi Padang Puti Minang
+  h1MalamQty?: number;
+  h1MalamMenu?: string;
+  h1MalamStatus?: 'pending' | 'completed' | 'partial';
+  h1MalamPickedAt?: string;
+  h1MalamReceiver?: string;
+  h1MalamProofPhoto?: string;
+
   // Pagi (06.30) - Uduk Eyang Rita
   pagiQty: number;
   pagiMenu: string;

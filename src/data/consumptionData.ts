@@ -148,7 +148,7 @@ export const MENU_DEFINITIONS: MenuDetail[] = [
   },
 ];
 
-export const INITIAL_HARI_H_GROUPS: HariHGroupDistribution[] = [
+const RAW_HARI_H_GROUPS: HariHGroupDistribution[] = [
   // 14 SUB-DIVISI PANITIA MAIN DEALER (PER PIC RESMI)
   {
     id: 'h-grp-md-1',
@@ -1945,6 +1945,28 @@ export const INITIAL_HARI_H_GROUPS: HariHGroupDistribution[] = [
     notes: 'Buffer logistik konsumsi tak terduga, pengadaan air galon & mineral all-venue',
   },
 ];
+
+export const INITIAL_HARI_H_GROUPS: HariHGroupDistribution[] = RAW_HARI_H_GROUPS.map((group) => {
+  let defaultH1Siang = 0;
+  let defaultH1Malam = 0;
+  if (group.no <= 14) {
+    defaultH1Siang = group.siangQty || 2;
+    defaultH1Malam = group.malamQty || 2;
+  } else if (group.no === 64) {
+    defaultH1Siang = 5;
+    defaultH1Malam = 10;
+  }
+
+  return {
+    ...group,
+    h1SiangQty: group.h1SiangQty !== undefined ? group.h1SiangQty : defaultH1Siang,
+    h1SiangMenu: group.h1SiangMenu || 'Nasi Ladas',
+    h1SiangStatus: group.h1SiangStatus || 'pending',
+    h1MalamQty: group.h1MalamQty !== undefined ? group.h1MalamQty : defaultH1Malam,
+    h1MalamMenu: group.h1MalamMenu || 'Nasi Padang Puti Minang',
+    h1MalamStatus: group.h1MalamStatus || 'pending',
+  };
+});
 
 export const INITIAL_VOUCHER_DATA: VoucherDistributionItem[] = [
   // H-2 (Loading Awal)

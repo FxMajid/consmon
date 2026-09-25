@@ -101,10 +101,10 @@ export default function App() {
             let h1Siang = g.h1SiangQty;
             let h1Malam = g.h1MalamQty;
             if (h1Siang === undefined || h1Siang === null || (h1Siang === 0 && g.no <= 14)) {
-              h1Siang = g.no <= 14 ? (g.siangQty || 2) : (g.no === 64 ? 5 : 0);
+              h1Siang = g.no === 8 ? 9 : g.no <= 14 ? (g.siangQty || 2) : (g.no === 64 ? 5 : 0);
             }
             if (h1Malam === undefined || h1Malam === null || (h1Malam === 0 && g.no <= 14)) {
-              h1Malam = g.no <= 14 ? (g.malamQty || 2) : (g.no === 64 ? 10 : 0);
+              h1Malam = g.no === 8 ? 9 : g.no <= 14 ? (g.malamQty || 2) : (g.no === 64 ? 10 : 0);
             }
             if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
               return { ...g, category: 'Eksternal' as const, h1SiangQty: h1Siang, h1MalamQty: h1Malam };

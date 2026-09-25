@@ -1253,7 +1253,7 @@ const RAW_HARI_H_GROUPS: HariHGroupDistribution[] = [
   {
     id: 'h-grp-2',
     no: 40,
-    groupName: 'Panitia Community',
+    groupName: 'Panitia Community Bikers',
     picName: 'Indah',
     picPhone: '87854104553',
     category: 'Eksternal',
@@ -1276,7 +1276,7 @@ const RAW_HARI_H_GROUPS: HariHGroupDistribution[] = [
     malamMenu: 'Mbok Jum',
     malamStatus: 'pending',
     totalAmount: 3875000,
-    notes: 'Panitia Bikers & Komunitas Motor',
+    notes: 'Panitia Community Bikers (50 Pax) - Paguyuban & Komunitas Bikers',
   },
   {
     id: 'h-grp-3',
@@ -2095,7 +2095,7 @@ export const INITIAL_VOUCHER_DATA: VoucherDistributionItem[] = [
     id: 'vouch-h1-2-malam',
     day: 'H-1',
     groupNo: 2,
-    groupName: 'Panitia Community',
+    groupName: 'Panitia Community Bikers',
     picName: 'Fajri / Indah',
     picPhone: '87854104553',
     mealType: 'Makan Malam',
@@ -3263,10 +3263,10 @@ export const INDIVIDUAL_ACCESS_CARDS: IndividualAccessCard[] = [
   // Eksternal Groups
   {
     no: 108,
-    name: 'Panitia Community (50 Pax)',
+    name: 'Panitia Community Bikers (50 Pax)',
     picHbd: 'Community HBD',
     employee: 'Eksternal',
-    areaKerja: 'Community Basecamp',
+    areaKerja: 'Community Basecamp (Community Bikers)',
     picPengambil: 'Indah / Fajri',
     kontakWa: '87854104553',
     qty: 50,

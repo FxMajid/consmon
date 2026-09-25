@@ -311,7 +311,7 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
 
             {/* Quick click tags for popular areas from data */}
             <div className="flex flex-wrap gap-1 mt-2">
-              {['Konsumsi', 'Registrasi', 'Booth Games', 'Backstage', 'Perlengkapan', 'Medis', 'Security', 'Foto Booth', 'Motoran', 'WP'].map((areaTag) => (
+              {['Community Bikers', 'Community AHM', 'Konsumsi', 'Registrasi', 'Booth Games', 'Backstage', 'Perlengkapan', 'Medis', 'Security', 'Foto Booth', 'Motoran', 'WP'].map((areaTag) => (
                 <button
                   type="button"
                   key={areaTag}

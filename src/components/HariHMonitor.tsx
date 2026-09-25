@@ -38,7 +38,8 @@ const AREA_TO_GROUP_KEYWORDS: Record<string, string[]> = {
   'backstage': ['backstage', 'lo', 'show director', 'concert', 'liaison officer'],
   'booth games': ['booth games', 'zone 3'],
   'choir': ['choir', 'paduan suara'],
-  'community bikers': ['community bikers', 'paguyuban', 'komunitas'],
+  'community ahm': ['community ahm'],
+  'community bikers': ['community bikers', 'panitia community', 'bikers', 'paguyuban', 'community basecamp'],
   'damkar': ['damkar', 'pemadam kebakaran', 'pemadam'],
   'dancer': ['dancer', 'penari', 'opening closing'],
   'foto booth': ['foto booth', 'foto corner', 'zone 4'],
@@ -154,7 +155,7 @@ export function isGroupActivatedByIdCards(
       if (!isMatch) {
         const areaKeywords = areaClean
           .split(' ')
-          .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan'].includes(w));
+          .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan', 'community'].includes(w));
         for (const kw of areaKeywords) {
           if (groupClean.includes(kw) || membersClean.includes(kw) || picClean.includes(kw)) {
             isMatch = true;

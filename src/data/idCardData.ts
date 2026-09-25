@@ -7,6 +7,7 @@ export const WORK_AREAS = [
   'Backstage',
   'Booth Games',
   'Choir',
+  'Community AHM',
   'Community Bikers',
   'DAMKAR',
   'Dancer',

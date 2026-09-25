@@ -1463,8 +1463,7 @@ export const MasterDataManager: React.FC<MasterDataManagerProps> = ({
                     value={editingHariH.no}
                     onChange={(e) => {
                       const num = parseInt(e.target.value) || 1;
-                      const autoCat = num === 64 ? 'Buffer' : (num >= 40 ? 'Eksternal' : 'Internal');
-                      setEditingHariH({ ...editingHariH, no: num, category: autoCat });
+                      setEditingHariH({ ...editingHariH, no: num });
                     }}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-red-500 font-bold"
                   />

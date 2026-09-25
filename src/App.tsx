@@ -106,14 +106,14 @@ export default function App() {
             if (h1Malam === undefined || h1Malam === null || (h1Malam === 0 && g.no <= 14)) {
               h1Malam = g.no === 8 ? 9 : g.no <= 14 ? (g.malamQty || 2) : (g.no === 64 ? 10 : 0);
             }
-            if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
-              return { ...g, category: 'Eksternal' as const, h1SiangQty: h1Siang, h1MalamQty: h1Malam };
-            }
-            if (g.no === 64 && g.category !== 'Buffer') {
-              return { ...g, category: 'Buffer' as const, h1SiangQty: h1Siang, h1MalamQty: h1Malam };
+            let cat = g.category || (g.no === 64 ? 'Buffer' : (g.no >= 40 && g.no < 64 ? 'Eksternal' : 'Internal'));
+            // Auto-correct Community AHM to Internal if user intended it as Internal
+            if (g.groupName && g.groupName.toLowerCase().includes('community ahm')) {
+              cat = 'Internal';
             }
             return {
               ...g,
+              category: cat,
               h1SiangQty: h1Siang,
               h1SiangMenu: g.h1SiangMenu || 'Nasi Ladas',
               h1SiangStatus: g.h1SiangStatus || 'pending',
@@ -421,11 +421,12 @@ export default function App() {
             (g) => !obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal'
           )
           .map((g) => {
-            if (g.no >= 40 && g.no < 64 && g.category !== 'Eksternal') {
-              return { ...g, category: 'Eksternal' as const };
+            if (g.groupName && g.groupName.toLowerCase().includes('community ahm')) {
+              return { ...g, category: 'Internal' as const };
             }
-            if (g.no === 64 && g.category !== 'Buffer') {
-              return { ...g, category: 'Buffer' as const };
+            if (!g.category) {
+              const cat: 'Internal' | 'Eksternal' | 'Buffer' = g.no === 64 ? 'Buffer' : (g.no >= 40 && g.no < 64 ? 'Eksternal' : 'Internal');
+              return { ...g, category: cat };
             }
             return g;
           });

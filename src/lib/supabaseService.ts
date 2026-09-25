@@ -263,13 +263,13 @@ export async function fetchHariHFromSupabase(): Promise<HariHGroupDistribution[]
 
     return data.map((r: any) => {
       let cat: 'Internal' | 'Eksternal' | 'Buffer' = 'Internal';
-      if (r.category === 'Eksternal' || r.category === 'Buffer') {
+      if (r.category === 'Internal' || r.category === 'Eksternal' || r.category === 'Buffer') {
         cat = r.category;
       } else if (r.no === 64 || r.group_name?.toLowerCase().includes('buffer') || r.group_name?.toLowerCase().includes('cadangan')) {
         cat = 'Buffer';
-      } else if (r.no >= 40) {
+      } else if (r.no >= 40 && r.no < 64) {
         cat = 'Eksternal';
-      } else if (r.category === 'Internal') {
+      } else {
         cat = 'Internal';
       }
 
@@ -561,7 +561,7 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
   if (!client) return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
 
   try {
-    const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
+    const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 && group.no < 64 ? 'Eksternal' : 'Internal'));
     const computedNotes = buildComputedGroupNotes(group);
 
     const payload: Record<string, any> = {
@@ -673,7 +673,7 @@ export async function bulkUpsertHariHToSupabase(groups: HariHGroupDistribution[]
 
   try {
     const payloads = groups.map((group) => {
-      const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 ? 'Eksternal' : 'Internal'));
+      const category = group.category || (group.no === 64 ? 'Buffer' : (group.no >= 40 && group.no < 64 ? 'Eksternal' : 'Internal'));
       const computedNotes = buildComputedGroupNotes(group);
       return {
         id: group.id,
@@ -755,23 +755,26 @@ export async function syncHariHCategoriesInSupabase(): Promise<void> {
   const client = getSupabase();
   if (!client) return;
   try {
-    // 1. Update Eksternal (no 40 to 63)
+    // 1. Update Eksternal (no 40 to 63) ONLY if category is not set
     await client
       .from('hari_h_distributions')
       .update({ category: 'Eksternal', updated_at: new Date().toISOString() })
+      .is('category', null)
       .gte('no', 40)
       .lt('no', 64);
 
-    // 2. Update Buffer (no 64)
+    // 2. Update Buffer (no 64) ONLY if category is not set
     await client
       .from('hari_h_distributions')
       .update({ category: 'Buffer', updated_at: new Date().toISOString() })
+      .is('category', null)
       .eq('no', 64);
 
-    // 3. Update Internal (no 1 to 39)
+    // 3. Update Internal (no 1 to 39) ONLY if category is not set
     await client
       .from('hari_h_distributions')
       .update({ category: 'Internal', updated_at: new Date().toISOString() })
+      .is('category', null)
       .lt('no', 40);
 
     console.log('[Supabase] Successfully synchronized categories in database (Internal / Eksternal / Buffer)');

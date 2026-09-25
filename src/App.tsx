@@ -345,6 +345,38 @@ export default function App() {
     return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
   };
 
+  // Helper to safely merge cloud Hari H groups with local state
+  const mergeHariH = (localList: HariHGroupDistribution[], cloudList: HariHGroupDistribution[]): HariHGroupDistribution[] => {
+    const obsoleteIds = ['h-grp-1', 'h-grp-md-15', 'h-grp-4', 'h-grp-8'];
+    const map = new Map<string, HariHGroupDistribution>();
+    // 1. Keep local custom groups or groups created locally
+    localList.forEach((g) => {
+      if (!obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal') {
+        map.set(g.id, g);
+      }
+    });
+    // 2. Cloud groups take precedence
+    cloudList.forEach((g) => {
+      if (!obsoleteIds.includes(g.id) && g.groupName !== 'Panitia MD' && g.picName !== '16 PIC Internal') {
+        map.set(g.id, g);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.no - b.no);
+  };
+
+  // Helper to safely merge vouchers with local state
+  const mergeVouchers = (localList: VoucherDistributionItem[], cloudList: VoucherDistributionItem[]): VoucherDistributionItem[] => {
+    const obsoleteIds = ['vouch-h1-1', 'vouch-h1-md-1'];
+    const map = new Map<string, VoucherDistributionItem>();
+    localList.forEach((v) => {
+      if (!obsoleteIds.includes(v.id)) map.set(v.id, v);
+    });
+    cloudList.forEach((v) => {
+      if (!obsoleteIds.includes(v.id)) map.set(v.id, v);
+    });
+    return Array.from(map.values());
+  };
+
   // Initial cloud sync & Real-time multi-device subscription from Supabase
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
@@ -434,8 +466,19 @@ export default function App() {
           bulkUpsertHariHToSupabase(cleanCloud);
         }
 
-        setHariHGroups(cleanCloud);
-        localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cleanCloud));
+        setHariHGroups((prevLocal) => {
+          const merged = mergeHariH(prevLocal, cleanCloud);
+          localStorage.setItem('hbd_hari_h_groups', JSON.stringify(merged));
+
+          // Auto-sync any local custom groups missing in cloud
+          const missingInCloud = merged.filter((g) => !cleanCloud.some((cg) => cg.id === g.id));
+          if (missingInCloud.length > 0) {
+            console.log('[Supabase] Auto-syncing local custom groups to cloud:', missingInCloud.map((g) => g.groupName));
+            bulkUpsertHariHToSupabase(missingInCloud);
+          }
+
+          return merged;
+        });
       } else if (cloudHariH && cloudHariH.length === 0) {
         await bulkUpsertHariHToSupabase(INITIAL_HARI_H_GROUPS);
         setHariHGroups(INITIAL_HARI_H_GROUPS);
@@ -451,10 +494,18 @@ export default function App() {
           await deleteVoucherFromSupabase('vouch-h1-md-1');
         }
 
-        // Always honor current cloud vouchers from database (even if empty because user deleted all)
-        setVouchers(cloudVouchers);
-        localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
-        localStorage.setItem('hbd_cloud_vouchers_seeded', 'true');
+        // Safely merge cloud vouchers with local state
+        setVouchers((prevLocal) => {
+          const merged = mergeVouchers(prevLocal, cloudVouchers);
+          localStorage.setItem('hbd_vouchers', JSON.stringify(merged));
+          localStorage.setItem('hbd_cloud_vouchers_seeded', 'true');
+
+          const missingInCloud = merged.filter((v) => !cloudVouchers.some((cv) => cv.id === v.id));
+          if (missingInCloud.length > 0) {
+            bulkUpsertVouchersToSupabase(missingInCloud);
+          }
+          return merged;
+        });
       }
     });
 
@@ -485,8 +536,11 @@ export default function App() {
         () => {
           fetchHariHFromSupabase().then((cloudHariH) => {
             if (cloudHariH !== null) {
-              setHariHGroups(cloudHariH);
-              localStorage.setItem('hbd_hari_h_groups', JSON.stringify(cloudHariH));
+              setHariHGroups((prevLocal) => {
+                const merged = mergeHariH(prevLocal, cloudHariH);
+                localStorage.setItem('hbd_hari_h_groups', JSON.stringify(merged));
+                return merged;
+              });
             }
           });
         }
@@ -501,8 +555,11 @@ export default function App() {
         () => {
           fetchVouchersFromSupabase().then((cloudVouchers) => {
             if (cloudVouchers !== null) {
-              setVouchers(cloudVouchers);
-              localStorage.setItem('hbd_vouchers', JSON.stringify(cloudVouchers));
+              setVouchers((prevLocal) => {
+                const merged = mergeVouchers(prevLocal, cloudVouchers);
+                localStorage.setItem('hbd_vouchers', JSON.stringify(merged));
+                return merged;
+              });
             }
           });
         }

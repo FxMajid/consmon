@@ -616,55 +616,31 @@ export async function upsertHariHToSupabase(group: HariHGroupDistribution): Prom
       updated_at: new Date().toISOString(),
     };
 
-    // 1. First attempt: Standard UPDATE with full payload
-    let { error } = await client
-      .from('hari_h_distributions')
-      .update(payload)
-      .eq('id', group.id);
+    // Direct UPSERT (inserts if new, updates if existing)
+    let { error } = await client.from('hari_h_distributions').upsert(payload);
 
-    // If update failed due to missing columns in user's schema (e.g. h1_siang_* or members)
+    // If upsert failed due to missing columns in user's schema (e.g. h1_siang_* or members)
     if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
-      console.warn('[Supabase] Missing column detected during Hari H update:', error.message, 'Trying fallback without new columns (data preserved in notes)...');
+      console.warn('[Supabase] Missing column detected during Hari H upsert:', error.message, 'Trying fallback without new columns (data preserved in notes)...');
       const fallbackPayload = stripH1AndOptionalColumns(payload, false);
-      const retryUpdate = await client
+      const retryUpsert = await client
         .from('hari_h_distributions')
-        .update(fallbackPayload)
-        .eq('id', group.id);
-      error = retryUpdate.error;
+        .upsert(fallbackPayload);
+      error = retryUpsert.error;
 
       // If still error, strip older optional columns
       if (error && (error.message.includes('column') || error.message.includes('schema cache') || error.message.includes('does not exist'))) {
         const ultraFallback = stripH1AndOptionalColumns(payload, true);
         const retryUltra = await client
           .from('hari_h_distributions')
-          .update(ultraFallback)
-          .eq('id', group.id);
+          .upsert(ultraFallback);
         error = retryUltra.error;
       }
     }
 
-    // If update succeeded, return true
-    if (!error) {
-      console.log('[Supabase] Successfully updated Hari H group:', group.id, group.groupName);
-      return { success: true };
-    }
-
-    // 2. If update failed (e.g. new record), try UPSERT
-    let upsertRes = await client.from('hari_h_distributions').upsert(payload);
-    if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache') || upsertRes.error.message.includes('does not exist'))) {
-      console.warn('[Supabase] Missing column detected during Hari H upsert, retrying with fallback payload...');
-      const fallbackPayload = stripH1AndOptionalColumns(payload, false);
-      upsertRes = await client.from('hari_h_distributions').upsert(fallbackPayload);
-      
-      if (upsertRes.error && (upsertRes.error.message.includes('column') || upsertRes.error.message.includes('schema cache') || upsertRes.error.message.includes('does not exist'))) {
-        const ultraFallback = stripH1AndOptionalColumns(payload, true);
-        upsertRes = await client.from('hari_h_distributions').upsert(ultraFallback);
-      }
-    }
-
-    if (upsertRes.error) {
-      console.warn('[Supabase] Error upserting Hari H group:', upsertRes.error.message);
-      return { success: false, error: upsertRes.error.message };
+    if (error) {
+      console.error('[Supabase] Error upserting Hari H group:', error.message);
+      return { success: false, error: error.message };
     }
 
     console.log('[Supabase] Successfully upserted Hari H group:', group.id, group.groupName);

@@ -76,6 +76,58 @@ const AREA_TO_GROUP_KEYWORDS: Record<string, string[]> = {
 };
 
 /**
+ * Accurately matches two person names (e.g., card holder vs PIC or group member).
+ * Avoids false positives from common single words like "Jaya", "Putra", "Ahmad", "Bella", etc.
+ */
+function isPersonNameMatch(holderRaw: string, targetRaw: string): boolean {
+  if (!holderRaw || !targetRaw) return false;
+
+  const cleanName = (str: string) =>
+    (str || '')
+      .toLowerCase()
+      .replace(/[^\w\s]/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const h = cleanName(holderRaw);
+  const t = cleanName(targetRaw);
+  if (h.length < 3 || t.length < 3) return false;
+
+  // 1. Exact match
+  if (h === t) return true;
+
+  const hWords = h.split(' ').filter((w) => w.length > 0);
+  const tWords = t.split(' ').filter((w) => w.length > 0);
+  if (hWords.length === 0 || tWords.length === 0) return false;
+
+  // 2. Full phrase containment (e.g. "kokoh jaya" in "kokoh jaya adillah")
+  // Only valid if the substring has at least 2 significant words or is >= 6 chars
+  if ((hWords.length >= 2 || h.length >= 6) && t.includes(h)) return true;
+  if ((tWords.length >= 2 || t.length >= 6) && h.includes(t)) return true;
+
+  // 3. Compare significant words (excluding single-character initials like 'a', 'm', 's')
+  const hSig = hWords.filter((w) => w.length >= 2);
+  const tSig = tWords.filter((w) => w.length >= 2);
+
+  // If both have at least 2 significant words (e.g. "kokoh jaya a" vs "kokoh jaya adillah")
+  if (hSig.length >= 2 && tSig.length >= 2) {
+    // Both first two words must match! E.g. "kokoh" === "kokoh" && "jaya" === "jaya"
+    if (hSig[0] === tSig[0] && hSig[1] === tSig[1]) {
+      return true;
+    }
+  }
+
+  // 4. Single-word name (e.g. holder is "Indah" or "Renold" or "Diana")
+  if (hSig.length === 1 && hSig[0].length >= 4) {
+    if (tSig[0] === hSig[0] && (tSig.length === 1 || hSig[0].length >= 5)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Checks if a Hari H group/division has been activated by any registered ID Card in "ID Card & Aktivasi QR"
  */
 export function isGroupActivatedByIdCards(
@@ -110,58 +162,82 @@ export function isGroupActivatedByIdCards(
   const membersClean = clean(group.members || group.notes || '');
   const allGroupText = `${groupClean} ${picClean} ${membersClean}`;
 
+  // Extract individual members array from members string
+  const individualMembers = (group.members || '')
+    .replace(/\[H1_DATA:[^\]]+\]/g, '')
+    .replace(/Anggota:\s*/gi, '')
+    .split(/[,|;]/)
+    .map((m) => m.trim())
+    .filter((m) => m.length >= 3);
+
+  const isMobileGroup = groupClean.includes('mobile') || (group.notes || '').toLowerCase().includes('area: mobile');
+
   const matchedCards: IDCardKonsumsi[] = [];
 
   for (const card of activeCards) {
-    const holderClean = clean(card.holderName || '');
     const areaClean = clean(card.areaKerja || '');
     let isMatch = false;
 
-    // 1. Match by holder name in group picName, members list, or notes
-    if (holderClean && holderClean.length >= 3) {
-      if (picClean.includes(holderClean) || holderClean.includes(picClean)) {
-        isMatch = true;
-      } else if (membersClean.includes(holderClean)) {
-        isMatch = true;
-      } else {
-        const words = holderClean.split(' ').filter((w) => w.length >= 4);
-        for (const w of words) {
-          if (membersClean.includes(w) || picClean.includes(w)) {
-            isMatch = true;
+    // Check if card has an area match with this group
+    let isAreaMatch = false;
+    if (areaClean) {
+      const aliases = AREA_TO_GROUP_KEYWORDS[areaClean] || [areaClean];
+      for (const alias of aliases) {
+        if (alias.length <= 3) {
+          const regex = new RegExp(`\\b${alias}\\b`, 'i');
+          if (regex.test(allGroupText)) {
+            isAreaMatch = true;
+            break;
+          }
+        } else if (allGroupText.includes(alias) || alias.includes(groupClean)) {
+          isAreaMatch = true;
+          break;
+        }
+      }
+
+      // Fallback check keyword parts of area kerja
+      if (!isAreaMatch) {
+        const areaKeywords = areaClean
+          .split(' ')
+          .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan', 'community'].includes(w));
+        for (const kw of areaKeywords) {
+          if (groupClean.includes(kw) || membersClean.includes(kw) || picClean.includes(kw)) {
+            isAreaMatch = true;
             break;
           }
         }
       }
     }
 
-    // 2. Match by area kerja aliases & keywords
-    if (!isMatch && areaClean) {
-      // Check explicit alias mapping
-      const aliases = AREA_TO_GROUP_KEYWORDS[areaClean] || [areaClean];
-      for (const alias of aliases) {
-        if (alias.length <= 3) {
-          const regex = new RegExp(`\\b${alias}\\b`, 'i');
-          if (regex.test(allGroupText)) {
-            isMatch = true;
+    // Check if card holder name matches PIC or an individual member
+    let isNameMatch = false;
+    if (card.holderName) {
+      if (isPersonNameMatch(card.holderName, group.picName)) {
+        isNameMatch = true;
+      } else {
+        for (const member of individualMembers) {
+          if (isPersonNameMatch(card.holderName, member)) {
+            isNameMatch = true;
             break;
           }
-        } else if (allGroupText.includes(alias) || alias.includes(groupClean)) {
-          isMatch = true;
-          break;
         }
       }
+    }
 
-      // Fallback check keyword parts of area kerja
-      if (!isMatch) {
-        const areaKeywords = areaClean
-          .split(' ')
-          .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan', 'community'].includes(w));
-        for (const kw of areaKeywords) {
-          if (groupClean.includes(kw) || membersClean.includes(kw) || picClean.includes(kw)) {
-            isMatch = true;
-            break;
-          }
-        }
+    // Determine final match:
+    if (isMobileGroup) {
+      // Mobile groups must match by PIC or individual member name
+      if (isNameMatch) {
+        isMatch = true;
+      }
+    } else {
+      // Specific division groups:
+      // If card's area matches this group, it's a match!
+      if (isAreaMatch) {
+        isMatch = true;
+      } else if (isNameMatch && (!areaClean || areaClean === 'mobile')) {
+        // Name matches and card has no conflicting specific division area
+        isMatch = true;
       }
     }
 

@@ -30,22 +30,23 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { getBarcodeForSlot, getBarcodeForGroupGeneral } from '../utils/barcodeUtils';
+import { isPersonNameMatch } from '../utils/nameMatching';
 
 // Explicit keywords and aliases mapping for all 39 Dropdown Area Kerja to Hari H groups
-const AREA_TO_GROUP_KEYWORDS: Record<string, string[]> = {
+export const AREA_TO_GROUP_KEYWORDS: Record<string, string[]> = {
   'babinkamtibnas': ['babinkamtibmas', 'babinkamtibnas', 'polsek', 'polri'],
   'babinsa': ['babinsa', 'tni', 'pkor'],
-  'backstage': ['backstage', 'lo', 'show director', 'concert', 'liaison officer'],
+  'backstage': ['backstage', 'show director', 'concert', 'liaison officer'],
   'booth games': ['booth games', 'zone 3'],
   'choir': ['choir', 'paduan suara'],
   'community ahm': ['community ahm'],
-  'community bikers': ['community bikers', 'panitia community', 'bikers', 'paguyuban', 'community basecamp'],
+  'community bikers': ['community bikers', 'panitia community bikers', 'bikers', 'paguyuban', 'community basecamp'],
   'damkar': ['damkar', 'pemadam kebakaran', 'pemadam'],
   'dancer': ['dancer', 'penari', 'opening closing'],
   'foto booth': ['foto booth', 'foto corner', 'zone 4'],
   'funtastic band': ['funtastic band', 'funtastic'],
   'keamanan gedung': ['keamanan gedung', 'koramil'],
-  'keamanan lokal dan parkir': ['parkir', 'keamanan lokal', 'external parkir'],
+  'keamanan lokal dan parkir': ['keamanan lokal dan parkir', 'keamanan lokal', 'parkir', 'external parkir'],
   'keamanan polda': ['keamanan polda', 'polda lampung', 'polda'],
   'kipas tua': ['kipas tua', 'talent kipas'],
   'konsumsi': ['konsumsi'],
@@ -64,68 +65,16 @@ const AREA_TO_GROUP_KEYWORDS: Record<string, string[]> = {
   'second stage': ['second stage', 'double deck', 'zone 1'],
   'security': ['security', 'security external'],
   'service motor': ['service motor', 'servis motor', 'kabeng', 'h2'],
-  'smk binaan': ['smk', 'smk binaan', 'booth h2'],
-  'tim armada': ['armada', 'crew armada', 'bus driver', 'driver'],
+  'smk binaan': ['smk binaan', 'smk', 'booth h2'],
+  'tim armada': ['tim armada', 'armada', 'crew armada', 'bus driver', 'driver'],
   'trafis': ['trafis', 'pijat gratis', 'terapis'],
   'umkm': ['umkm', 'sponsorship', 'zone 2'],
-  'uptd area': ['uptd area', 'pengelola pkor', 'uptd'],
+  'uptd area': ['uptd area', 'pengelola pkor'],
   'uptd kebersihan': ['uptd kebersihan', 'kebersihan pkor'],
-  'videografer': ['videografer', 'video & foto grafer', 'video foto grafer', 'video', 'grafer'],
+  'videografer': ['videografer', 'video & foto grafer', 'video foto grafer', 'videografi'],
   'volunteer mahasiswa': ['volunteer mahasiswa', 'volunteer', 'mahasiswa'],
   'wp': ['wp', 'zone 7 wp', 'zone 7'],
 };
-
-/**
- * Accurately matches two person names (e.g., card holder vs PIC or group member).
- * Avoids false positives from common single words like "Jaya", "Putra", "Ahmad", "Bella", etc.
- */
-function isPersonNameMatch(holderRaw: string, targetRaw: string): boolean {
-  if (!holderRaw || !targetRaw) return false;
-
-  const cleanName = (str: string) =>
-    (str || '')
-      .toLowerCase()
-      .replace(/[^\w\s]/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-  const h = cleanName(holderRaw);
-  const t = cleanName(targetRaw);
-  if (h.length < 3 || t.length < 3) return false;
-
-  // 1. Exact match
-  if (h === t) return true;
-
-  const hWords = h.split(' ').filter((w) => w.length > 0);
-  const tWords = t.split(' ').filter((w) => w.length > 0);
-  if (hWords.length === 0 || tWords.length === 0) return false;
-
-  // 2. Full phrase containment (e.g. "kokoh jaya" in "kokoh jaya adillah")
-  // Only valid if the substring has at least 2 significant words or is >= 6 chars
-  if ((hWords.length >= 2 || h.length >= 6) && t.includes(h)) return true;
-  if ((tWords.length >= 2 || t.length >= 6) && h.includes(t)) return true;
-
-  // 3. Compare significant words (excluding single-character initials like 'a', 'm', 's')
-  const hSig = hWords.filter((w) => w.length >= 2);
-  const tSig = tWords.filter((w) => w.length >= 2);
-
-  // If both have at least 2 significant words (e.g. "kokoh jaya a" vs "kokoh jaya adillah")
-  if (hSig.length >= 2 && tSig.length >= 2) {
-    // Both first two words must match! E.g. "kokoh" === "kokoh" && "jaya" === "jaya"
-    if (hSig[0] === tSig[0] && hSig[1] === tSig[1]) {
-      return true;
-    }
-  }
-
-  // 4. Single-word name (e.g. holder is "Indah" or "Renold" or "Diana")
-  if (hSig.length === 1 && hSig[0].length >= 4) {
-    if (tSig[0] === hSig[0] && (tSig.length === 1 || hSig[0].length >= 5)) {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 /**
  * Checks if a Hari H group/division has been activated by any registered ID Card in "ID Card & Aktivasi QR"
@@ -138,14 +87,37 @@ export function isGroupActivatedByIdCards(
   matchedCard?: IDCardKonsumsi;
   matchedCards: IDCardKonsumsi[];
   cardCount: number;
+  targetPax: number;
+  isPicActivated: boolean;
+  picCard?: IDCardKonsumsi;
+  activatedPersons: string[];
+  unactivatedPersons: string[];
 } {
+  const targetPax = Math.max(1, group.siangQty || group.pagiQty || group.malamQty || 1);
+
   if (!idCards || idCards.length === 0) {
-    return { isActivated: false, matchedCards: [], cardCount: 0 };
+    return { 
+      isActivated: false, 
+      matchedCards: [], 
+      cardCount: 0, 
+      targetPax, 
+      isPicActivated: false, 
+      activatedPersons: [], 
+      unactivatedPersons: [group.picName].filter(Boolean) 
+    };
   }
 
   const activeCards = idCards.filter((c) => c.status === 'active');
   if (activeCards.length === 0) {
-    return { isActivated: false, matchedCards: [], cardCount: 0 };
+    return { 
+      isActivated: false, 
+      matchedCards: [], 
+      cardCount: 0, 
+      targetPax, 
+      isPicActivated: false, 
+      activatedPersons: [], 
+      unactivatedPersons: [group.picName].filter(Boolean) 
+    };
   }
 
   const clean = (str: string) =>
@@ -160,15 +132,24 @@ export function isGroupActivatedByIdCards(
   const groupClean = clean(group.groupName);
   const picClean = clean(group.picName);
   const membersClean = clean(group.members || group.notes || '');
-  const allGroupText = `${groupClean} ${picClean} ${membersClean}`;
 
-  // Extract individual members array from members string
-  const individualMembers = (group.members || '')
-    .replace(/\[H1_DATA:[^\]]+\]/g, '')
-    .replace(/Anggota:\s*/gi, '')
-    .split(/[,|;]/)
-    .map((m) => m.trim())
-    .filter((m) => m.length >= 3);
+  // Extract individual members array from members string or notes
+  const rawMembersStr = group.members || group.notes || '';
+  const individualMembers: string[] = [];
+  if (rawMembersStr) {
+    const cleanedMembersStr = rawMembersStr
+      .replace(/\[H1_DATA:[^\]]+\]/g, '')
+      .replace(/Anggota:\s*/gi, '')
+      .replace(/PIC:\s*[^,;]+/gi, '');
+
+    const rawTokens = cleanedMembersStr.split(/[,;\n|]/);
+    for (const token of rawTokens) {
+      const cleanMember = token.replace(/\([^)]*\)/g, '').trim();
+      if (cleanMember.length >= 3) {
+        individualMembers.push(cleanMember);
+      }
+    }
+  }
 
   const isMobileGroup = groupClean.includes('mobile') || (group.notes || '').toLowerCase().includes('area: mobile');
 
@@ -178,38 +159,25 @@ export function isGroupActivatedByIdCards(
     const areaClean = clean(card.areaKerja || '');
     let isMatch = false;
 
-    // Check if card has an area match with this group
+    // 1. Check if card has an explicit area match with this group
     let isAreaMatch = false;
     if (areaClean) {
       const aliases = AREA_TO_GROUP_KEYWORDS[areaClean] || [areaClean];
       for (const alias of aliases) {
         if (alias.length <= 3) {
           const regex = new RegExp(`\\b${alias}\\b`, 'i');
-          if (regex.test(allGroupText)) {
+          if (regex.test(groupClean) || regex.test(membersClean)) {
             isAreaMatch = true;
             break;
           }
-        } else if (allGroupText.includes(alias) || alias.includes(groupClean)) {
+        } else if (groupClean.includes(alias) || alias.includes(groupClean) || membersClean.includes(alias)) {
           isAreaMatch = true;
           break;
         }
       }
-
-      // Fallback check keyword parts of area kerja
-      if (!isAreaMatch) {
-        const areaKeywords = areaClean
-          .split(' ')
-          .filter((w) => w.length >= 3 && !['zone', 'area', 'venue', 'team', 'tenda', 'pos', 'dan', 'community'].includes(w));
-        for (const kw of areaKeywords) {
-          if (groupClean.includes(kw) || membersClean.includes(kw) || picClean.includes(kw)) {
-            isAreaMatch = true;
-            break;
-          }
-        }
-      }
     }
 
-    // Check if card holder name matches PIC or an individual member
+    // 2. Check if card holder name matches PIC or an individual member
     let isNameMatch = false;
     if (card.holderName) {
       if (isPersonNameMatch(card.holderName, group.picName)) {
@@ -232,11 +200,10 @@ export function isGroupActivatedByIdCards(
       }
     } else {
       // Specific division groups:
-      // If card's area matches this group, it's a match!
+      // Match if explicit area matches, or if card holder specifically matches PIC/member name
       if (isAreaMatch) {
         isMatch = true;
       } else if (isNameMatch && (!areaClean || areaClean === 'mobile')) {
-        // Name matches and card has no conflicting specific division area
         isMatch = true;
       }
     }
@@ -246,11 +213,34 @@ export function isGroupActivatedByIdCards(
     }
   }
 
+  // Calculate PIC activation status
+  const picCard = matchedCards.find((c) => isPersonNameMatch(c.holderName || '', group.picName));
+  const isPicActivated = Boolean(picCard);
+
+  // Calculate activated vs unactivated persons
+  const allPersonsInGroup = Array.from(new Set([group.picName, ...individualMembers].filter(Boolean)));
+  const activatedPersons: string[] = [];
+  const unactivatedPersons: string[] = [];
+
+  for (const person of allPersonsInGroup) {
+    const isAct = matchedCards.some((c) => isPersonNameMatch(c.holderName || '', person));
+    if (isAct) {
+      activatedPersons.push(person);
+    } else {
+      unactivatedPersons.push(person);
+    }
+  }
+
   return {
     isActivated: matchedCards.length > 0,
     matchedCard: matchedCards[0],
     matchedCards,
     cardCount: matchedCards.length,
+    targetPax,
+    isPicActivated,
+    picCard,
+    activatedPersons,
+    unactivatedPersons,
   };
 }
 
@@ -1054,15 +1044,29 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                           </span>
                           {(() => {
                             const act = isGroupActivatedByIdCards(group, idCards);
-                            if (!act.isActivated) return null;
-                            const cardInfo = act.matchedCards.map((c) => `${c.holderName || 'Panitia'} (${c.id})`).join(', ');
+                            const targetPax = act.targetPax;
+                            if (!act.isActivated || act.cardCount === 0) {
+                              return (
+                                <span 
+                                  className="inline-flex items-center space-x-1 text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full"
+                                  title="Belum ada anggota atau PIC yang mengaktivasi ID Card untuk divisi ini"
+                                >
+                                  <span>Belum Aktivasi (0/{targetPax})</span>
+                                </span>
+                              );
+                            }
+                            const isComplete = act.cardCount >= targetPax;
                             return (
                               <span 
-                                className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs"
-                                title={`ID Card Aktif: ${cardInfo}`}
+                                className={`inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs border ${
+                                  isComplete
+                                    ? 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                                    : 'text-blue-800 bg-blue-100 border-blue-300'
+                                }`}
+                                title={`${act.cardCount} dari ${targetPax} kartu teraktivasi: ${act.matchedCards.map((c) => `${c.holderName || 'Panitia'} (${c.id})`).join(', ')}`}
                               >
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                <span>Sudah Aktivasi{act.cardCount > 1 ? ` (${act.cardCount} Kartu)` : ''}</span>
+                                <CheckCircle2 className={`w-3 h-3 ${isComplete ? 'text-emerald-600' : 'text-blue-600'}`} />
+                                <span>{isComplete ? '✓ Lengkap' : 'Sebagian'}: {act.cardCount}/{targetPax} Kartu</span>
                               </span>
                             );
                           })()}
@@ -1080,8 +1084,31 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
 
                         {/* PIC & WA info */}
                         <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <span>
-                            PIC Pengambil: <strong className="text-slate-800 font-semibold">{group.picName}</strong>
+                          <span className="inline-flex items-center flex-wrap gap-1.5">
+                            <span>PIC Pengambil:</span>
+                            <strong className="text-slate-800 font-semibold">{group.picName}</strong>
+                            {(() => {
+                              const act = isGroupActivatedByIdCards(group, idCards);
+                              if (act.isPicActivated) {
+                                return (
+                                  <span 
+                                    className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold"
+                                    title={`ID Card PIC ${group.picName} sudah aktif (${act.picCard?.id})`}
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>PIC Teraktivasi ({act.picCard?.id})</span>
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span 
+                                  className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-medium"
+                                  title={`PIC ${group.picName} belum melakukan aktivasi ID Card`}
+                                >
+                                  <span>PIC Belum Aktivasi</span>
+                                </span>
+                              );
+                            })()}
                           </span>
                           {group.picPhone && (
                             <span className="font-mono text-[11px] text-slate-600">
@@ -1098,7 +1125,7 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                               <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
                                 <Sparkles className="w-3 h-3 text-emerald-600" />
-                                Pemegang ID Card Aktif:
+                                Pemegang ID Card Aktif ({act.cardCount}/{act.targetPax}):
                               </span>
                               {act.matchedCards.map((c) => (
                                 <span
@@ -1111,6 +1138,11 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                                   <span>{c.holderName || 'Panitia'}</span>
                                 </span>
                               ))}
+                              {act.unactivatedPersons.length > 0 && (
+                                <span className="text-[10px] text-slate-400 italic ml-1">
+                                  (Belum aktivasi: {act.unactivatedPersons.join(', ')})
+                                </span>
+                              )}
                             </div>
                           );
                         })()}
@@ -1253,22 +1285,61 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                         </span>
                         {(() => {
                           const act = isGroupActivatedByIdCards(group, idCards);
-                          if (!act.isActivated) return null;
-                          const cardInfo = act.matchedCards.map((c) => `${c.holderName || 'Panitia'} (${c.id})`).join(', ');
+                          const targetPax = act.targetPax;
+                          if (!act.isActivated || act.cardCount === 0) {
+                            return (
+                              <span 
+                                className="inline-flex items-center space-x-1 text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full"
+                                title="Belum ada anggota atau PIC yang mengaktivasi ID Card untuk divisi ini"
+                              >
+                                <span>Belum Aktivasi (0/{targetPax})</span>
+                              </span>
+                            );
+                          }
+                          const isComplete = act.cardCount >= targetPax;
                           return (
                             <span 
-                              className="inline-flex items-center space-x-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs"
-                              title={`ID Card Aktif: ${cardInfo}`}
+                              className={`inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-2xs border ${
+                                isComplete
+                                  ? 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                                  : 'text-blue-800 bg-blue-100 border-blue-300'
+                              }`}
+                              title={`${act.cardCount} dari ${targetPax} kartu teraktivasi: ${act.matchedCards.map((c) => `${c.holderName || 'Panitia'} (${c.id})`).join(', ')}`}
                             >
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>Sudah Aktivasi{act.cardCount > 1 ? ` (${act.cardCount} Kartu)` : ''}</span>
+                              <CheckCircle2 className={`w-3 h-3 ${isComplete ? 'text-emerald-600' : 'text-blue-600'}`} />
+                              <span>{isComplete ? '✓ Lengkap' : 'Sebagian'}: {act.cardCount}/{targetPax} Kartu</span>
                             </span>
                           );
                         })()}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        PIC: <strong className="text-slate-800">{group.picName}</strong>
-                        {group.picPhone && <span className="ml-2 font-mono">WA: {group.picPhone}</span>}
+                      <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="inline-flex items-center flex-wrap gap-1.5">
+                          <span>PIC:</span>
+                          <strong className="text-slate-800">{group.picName}</strong>
+                          {(() => {
+                            const act = isGroupActivatedByIdCards(group, idCards);
+                            if (act.isPicActivated) {
+                              return (
+                                <span 
+                                  className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold"
+                                  title={`ID Card PIC ${group.picName} sudah aktif (${act.picCard?.id})`}
+                                >
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>PIC Teraktivasi ({act.picCard?.id})</span>
+                                </span>
+                              );
+                            }
+                            return (
+                              <span 
+                                className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-medium"
+                                title={`PIC ${group.picName} belum melakukan aktivasi ID Card`}
+                              >
+                                <span>PIC Belum Aktivasi</span>
+                              </span>
+                            );
+                          })()}
+                        </span>
+                        {group.picPhone && <span className="font-mono text-[11px] text-slate-600">WA: {group.picPhone}</span>}
                       </div>
 
                       {/* Chips for activated ID cards under this group */}
@@ -1276,10 +1347,10 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                         const act = isGroupActivatedByIdCards(group, idCards);
                         if (!act.isActivated || act.matchedCards.length === 0) return null;
                         return (
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
                               <Sparkles className="w-3 h-3 text-emerald-600" />
-                              Pemegang ID Card Aktif:
+                              Pemegang ID Card Aktif ({act.cardCount}/{act.targetPax}):
                             </span>
                             {act.matchedCards.map((c) => (
                               <span
@@ -1292,6 +1363,11 @@ export const HariHMonitor: React.FC<HariHMonitorProps> = ({
                                 <span>{c.holderName || 'Panitia'}</span>
                               </span>
                             ))}
+                            {act.unactivatedPersons.length > 0 && (
+                              <span className="text-[10px] text-slate-400 italic ml-1">
+                                (Belum aktivasi: {act.unactivatedPersons.join(', ')})
+                              </span>
+                            )}
                           </div>
                         );
                       })()}

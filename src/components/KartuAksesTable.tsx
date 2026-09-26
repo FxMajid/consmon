@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { IndividualAccessCard, IDCardKonsumsi } from '../types';
 import { WORK_AREAS } from '../data/idCardData';
+import { isPersonNameMatch } from '../utils/nameMatching';
 import { 
   Users, 
   Search, 
@@ -1197,6 +1198,7 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                     <th className="py-3 px-3 w-12 text-center">No</th>
                     <th className="py-3 px-3">Nama / Entitas</th>
+                    <th className="py-3 px-3 text-center">Status ID Card</th>
                     <th className="py-3 px-3">PIC Lapangan</th>
                     <th className="py-3 px-3">PIC Pengambil &amp; WA</th>
                     <th className="py-3 px-2 text-center">Qty</th>
@@ -1221,24 +1223,60 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {filteredCards.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-slate-400">
+                      <td colSpan={13} className="py-8 text-center text-slate-400">
                         Tidak ada data yang cocok dengan kriteria pencarian.
                       </td>
                     </tr>
                   ) : (
-                    filteredCards.map((row) => (
-                      <tr key={row.no} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
-                          {row.no}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-900">{row.name}</div>
-                          <div className="text-[10px] text-slate-400">{row.employee}</div>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <div className="font-semibold text-slate-800">{row.picHbd}</div>
-                          <div className="text-[10px] text-slate-400">{row.areaKerja}</div>
-                        </td>
+                    filteredCards.map((row) => {
+                      const activeCard = idCards.find(
+                        (c) => c.status === 'active' && isPersonNameMatch(c.holderName, row.name)
+                      );
+
+                      return (
+                        <tr key={row.no} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
+                            {row.no}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-slate-900">{row.name}</div>
+                            <div className="text-[10px] text-slate-400">{row.employee}</div>
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {activeCard ? (
+                              <button
+                                onClick={() => onOpenDigitalQrModal(activeCard)}
+                                title={`ID Card Aktif: ${activeCard.id} (Klik untuk buka QR konsumsi digital)`}
+                                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 text-[10px] font-bold transition-colors shadow-2xs"
+                              >
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Aktif ({activeCard.id})</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  onOpenActivationModal({
+                                    id: '',
+                                    cardCode: '',
+                                    activationCode: '',
+                                    pickupCode: '',
+                                    status: 'unactivated',
+                                    holderName: row.name,
+                                    holderEmail: row.kontakWa || '',
+                                    areaKerja: row.areaKerja || '',
+                                  } as any);
+                                }}
+                                title={`Aktivasi ID Card sekarang untuk ${row.name}`}
+                                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-800 border border-slate-200 hover:border-amber-300 text-[10px] font-medium transition-colors"
+                              >
+                                <span>Belum Aktivasi</span>
+                              </button>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="font-semibold text-slate-800">{row.picHbd}</div>
+                            <div className="text-[10px] text-slate-400">{row.areaKerja}</div>
+                          </td>
                         <td className="py-2.5 px-3">
                           <div className="font-medium text-slate-800">
                             {row.picPengambil || '-'}
@@ -1310,8 +1348,9 @@ export const KartuAksesTable: React.FC<KartuAksesTableProps> = ({
                           )}
                         </td>
                       </tr>
-                    ))
-                  )}
+                    );
+                  })
+                )}
                 </tbody>
               </table>
             </div>

@@ -63,7 +63,7 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
     const cardChanged = isOpen && card?.id && card.id !== lastCardIdRef.current;
 
     if (justOpened || cardChanged) {
-      if (card) {
+      if (card && card.id) {
         setSelectedCardId(card.id);
         setName(card.holderName || '');
         setContact(card.holderEmail || '');
@@ -72,19 +72,14 @@ export const IdCardActivationModal: React.FC<IdCardActivationModalProps> = ({
       } else {
         // Auto-assign first available unactivated card or generate next sequence
         const firstUnactivated = allCards.find((c) => c.status === 'unactivated');
-        if (firstUnactivated) {
-          setSelectedCardId(firstUnactivated.id);
-          lastCardIdRef.current = firstUnactivated.id;
-        } else {
-          // generate next ID
-          const nextNum = allCards.length + 1;
-          const newId = `IDC-${String(nextNum).padStart(3, '0')}`;
-          setSelectedCardId(newId);
-          lastCardIdRef.current = newId;
-        }
-        setName('');
-        setContact('');
-        setAreaKerja(WORK_AREAS[0]);
+        const nextId = firstUnactivated
+          ? firstUnactivated.id
+          : `IDC-${String(allCards.length + 1).padStart(3, '0')}`;
+        setSelectedCardId(nextId);
+        lastCardIdRef.current = nextId;
+        setName(card?.holderName || '');
+        setContact(card?.holderEmail || '');
+        setAreaKerja(card?.areaKerja || WORK_AREAS[0]);
       }
       setErrorMsg('');
       setShowAdvancedCardPicker(false);
